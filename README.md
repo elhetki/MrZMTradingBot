@@ -219,3 +219,45 @@ Edit `config.json` to change:
 
 *Built with passion by Zoran and Claude AI. Shared with The Trading Gym.*
 *MrZMTradingBot v1.0 — March 2026*
+
+---
+
+## Learning Engine v2 — Guardrails
+
+Based on community feedback from The Trading Gym, the self-learning engine now has 5 hard guardrails to prevent overfitting and runaway adjustments:
+
+### 1. Minimum Sample Size
+The bot requires **15 trades per pattern** before adjusting any scores. No more overfitting on a 3-trade winning streak. Until a pattern has 15+ data points, it uses default scoring.
+
+### 2. Rolling Window (Last 100 Trades)
+Only the **last 100 trades** are analyzed. Older trades decay naturally. If the market shifts from choppy to trending, the bot adapts within ~100 trades instead of being anchored to stale data from weeks ago.
+
+### 3. Asset-Isolated Learnings
+All learnings are tracked **per ticker**. If BEAR_ENGULFING loses on Gold, it only affects Gold — Solana keeps its own independent track record. No cross-contamination.
+
+```
+[BTC]       AVOID BULL_FLAG (32% win rate, 18 trades)
+[BRENTOIL]  PREFER SUPPORT_BOUNCE (71% win rate, 24 trades)
+[SOL]       NEUTRAL — insufficient data
+```
+
+### 4. Stop Loss Hard Cap
+Stop loss can **never exceed 2x its original value**. If base SL is 5%, the absolute maximum is 10% — mathematically enforced, no exceptions. The learning engine can widen SL, but it hits a wall.
+
+```
+Base SL: 5.0% → Max allowed: 10.0%
+Current: 7.2% [WITHIN LIMITS]
+```
+
+### 5. Direction Bias Ceiling
+Maximum **±10 probability points** for LONG vs SHORT bias. Even if LONG wins 90% of trades, SHORT signals only get -10pts penalty — they can still fire at 55%+. The bot never goes blind to valid counter-trend signals.
+
+```
+LONG bias: +8pts (from 72% win rate)
+SHORT still viable: needs 63%+ base probability to fire
+```
+
+All guardrails are displayed on startup and logged with every learning adjustment.
+
+*Community feedback → shipped same day* 💪
+
