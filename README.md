@@ -1,0 +1,221 @@
+# MrZMTradingBot
+### Automated Multi-Market Trading System for Hyperliquid
+*Built by Zoran @ The Trading Gym*
+
+---
+
+## What Is This?
+
+MrZMTradingBot is a fully automated trading bot that runs on your local machine and trades perpetual futures on Hyperliquid — the largest decentralized perps exchange doing $7B+ daily volume. It scans 5 markets simultaneously, detects high-probability setups using technical analysis and chart pattern recognition, executes trades with a smart tiered exit strategy, and learns from every single trade to get better over time.
+
+No cloud. No subscriptions. No API key sharing. Everything runs locally on your PC. You own the code.
+
+---
+
+## Markets (5 Simultaneous)
+
+| Market | Ticker | Type | Leverage | Why |
+|--------|--------|------|----------|-----|
+| Bitcoin | BTC | Crypto | 20x | $2.6B daily volume, most liquid perp |
+| Ethereum | ETH | Crypto | 20x | $800M volume, strong trends |
+| Solana | SOL | Crypto | 20x | High volatility, great for patterns |
+| Brent Oil | xyz:BRENTOIL | Commodity | 35x | War-driven volatility, 24/7 trading |
+| Gold | xyz:GOLD | Commodity | 15x | Safe haven, trending with conflict |
+
+The bot can hold up to 3 positions at the same time across different markets. It always picks the highest-probability signal.
+
+---
+
+## Strategy: Multi-Signal Scoring System
+
+The bot does NOT rely on a single indicator. It uses a point-based scoring system where multiple signals must align before entering a trade. A minimum score of 5 is required.
+
+### Indicators Used
+- RSI (14) — Relative Strength Index for overbought/oversold detection
+- EMA 9/21 — Fast and slow Exponential Moving Averages for trend direction
+- EMA Crossover Detection — Catches the exact moment trend flips
+- Bollinger Bands (20, 2) — Volatility bands for mean reversion plays
+- Price Momentum — 5-candle momentum for trend confirmation
+
+### Chart Pattern Detection
+The bot scans every 5-minute candle for these patterns:
+- Bull Flag / Bear Flag — Tight consolidation after a strong move
+- Triangle Breakout — Converging highs and lows with directional breakout
+- Support Bounce / Resistance Rejection — Price reacting to key levels
+- Bullish / Bearish Engulfing — Strong reversal candle patterns
+- Momentum Breakout — 3 consecutive directional candles with increasing volume
+
+### How Scoring Works
+
+| Signal | Points |
+|--------|--------|
+| RSI in extreme zone (<35 or >65) | +2 |
+| RSI approaching zone (35-45 or 55-65) | +1 |
+| EMA trend alignment | +2 |
+| EMA crossover (just happened) | +3 |
+| Bollinger Band extreme position | +2 |
+| Chart pattern (engulfing, support bounce) | +3 |
+| Chart pattern (flag, triangle, momentum) | +2 |
+| Price momentum confirmation | +1 |
+
+Example trade: EMA bullish (+2) + Support Bounce (+3) + RSI at 38 (+2) = Score 7 = HIGH CONFIDENCE LONG
+
+Only trades with score 5+ AND probability 65%+ are executed. No coin flips.
+
+---
+
+## Exit Strategy: 4-Stage Tiered System
+
+This is where the real edge is. The bot doesn't just set a flat TP/SL — it uses a dynamic, tiered exit plan that protects profits and limits losses.
+
+All percentages are based on leveraged P&L (your actual profit on the bet), not raw price movement.
+
+### The 4 Stages
+
+**Stage 1: INITIAL**
+- Entry with fixed Stop Loss at -5% leveraged P&L
+- At 35x leverage on oil, that's about $0.15 price movement
+- Protects against immediate adverse moves
+
+**Stage 2: BREAK-EVEN** (triggers at +5% profit)
+- Stop Loss automatically moves to entry price + 0.5% offset
+- From this point forward, you CANNOT lose money on this trade
+- Sound alert plays when this triggers
+
+**Stage 3: PARTIAL CLOSE** (triggers at +10% profit)
+- Bot closes 2/3 (66%) of the position and locks in profit
+- Remaining 1/3 runs with an activated trailing stop (3%)
+- This secures most of the gain while letting winners run
+
+**Stage 4: TAKE PROFIT** (triggers at +20% profit)
+- Close everything. Full take profit.
+- Bot immediately starts scanning for the next setup
+
+### Risk Management
+- Max 3 positions open simultaneously
+- Max daily loss: $50 — bot stops trading if hit
+- Max 3 consecutive losses — bot pauses and waits for better conditions
+- Cooldown: 2 minutes between trades per market
+- $10 bet size per trade (configurable)
+
+---
+
+## Self-Learning Brain
+
+This is the feature that makes MrZMTradingBot different. After every single trade, the bot analyzes what happened and adjusts its own strategy.
+
+### What It Tracks
+- Which chart patterns lead to wins vs losses
+- Which RSI zones are profitable for entries
+- LONG vs SHORT — which direction performs better
+- Which score thresholds actually win
+- Whether the stop loss is too tight (getting stopped out too often)
+
+### What It Adjusts Automatically
+- Avoids losing patterns — if BULL_FLAG loses 70%+ of trades, the bot stops using it as a signal
+- Prefers winning patterns — if SUPPORT_BOUNCE wins 65%+, it gets a score boost
+- Direction bias — if LONG trades win 70% while SHORT wins 30%, the bot favors LONG
+- SL width — if 70%+ of trades hit stop loss, the bot widens it automatically
+- Score threshold — learns what minimum score actually produces wins
+
+### Persistence
+Everything saves to `learnings.json`. When you restart the bot, it loads its brain and picks up where it left off. The more it trades, the smarter it gets.
+
+---
+
+## Live Dashboard
+
+The bot comes with a real-time web dashboard (runs locally at http://localhost:8888) showing:
+
+- **5 Market Strip** — live prices, RSI, EMA direction for all markets
+- **Active Positions** — entry, TP, SL, current P&L, SL stage badge
+- **Performance Stats** — total P&L, win rate, wins/losses
+- **Brain Panel** — what the self-learning engine has figured out
+- **Equity Curve** — visual chart of your P&L over time
+- **Trade History** — every trade with market, direction, entry, exit, P&L, reason
+- **Activity Log** — real-time stream of bot actions
+
+Everything updates every 2 seconds from live Hyperliquid data.
+
+---
+
+## Sound Alerts
+
+The bot plays distinct sound alerts on Windows:
+- 🔔 Rising chime — Signal detected
+- ✅ Punchy confirmation — Trade executed
+- 💰 Cha-ching — Take profit hit
+- 🔄 Soft blip — Stop loss moved to break-even
+- ⚠️ Low warning — Stop loss hit
+
+---
+
+## Tech Stack
+
+- **Python 3.10+** — Trading engine
+- **Hyperliquid API** — Real-time price feeds and 5-minute candles
+- **HTML/CSS/JS Dashboard** — Local web interface
+- No dependencies beyond `requests` library
+- No cloud, no subscriptions — runs 100% on your machine
+- DRY RUN mode — Paper trade with real data before risking money
+
+---
+
+## Installation (2 Minutes)
+
+### Requirements
+- Windows 10/11
+- Python 3.10+ (https://python.org — check "Add to PATH" during install)
+
+### Setup
+```bash
+git clone https://github.com/jarvisjeecation/MrZMTradingBot.git
+cd MrZMTradingBot
+pip install requests
+```
+
+Then double-click `START.bat` or run:
+```bash
+python bot.py
+```
+
+That's it. The bot connects to Hyperliquid, loads candles for all 5 markets, opens the dashboard in your browser, and starts scanning.
+
+### Configuration
+Edit `config.json` to change:
+- Markets and leverage
+- Bet size
+- TP/SL percentages
+- RSI thresholds
+- Min probability
+- Sound on/off
+- DRY RUN vs LIVE
+
+---
+
+## ⚠️ Important Disclaimers
+
+- The bot starts in **DRY RUN mode** — it tracks trades but does NOT execute real ones
+- To trade live, you need a Hyperliquid wallet with funds and API key
+- Set `"dry_run": false` in config.json only when you're ready
+- **Never risk money you can't afford to lose**
+- Past performance does not guarantee future results
+- This is a tool, not financial advice — always do your own research
+- Test extensively in DRY RUN before going live
+
+---
+
+## Roadmap
+
+- [ ] Live trading integration with Hyperliquid Exchange API
+- [ ] More chart patterns (double top/bottom, head & shoulders)
+- [ ] Multi-timeframe analysis (1m + 5m + 15m confluence)
+- [ ] Telegram alerts integration
+- [ ] More markets (NASDAQ, S&P500, SILVER, individual stocks)
+- [ ] Backtesting engine with historical data
+- [ ] Mobile dashboard
+
+---
+
+*Built with passion by Zoran and Claude AI. Shared with The Trading Gym.*
+*MrZMTradingBot v1.0 — March 2026*
