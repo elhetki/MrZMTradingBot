@@ -261,3 +261,47 @@ All guardrails are displayed on startup and logged with every learning adjustmen
 
 *Community feedback → shipped same day* 💪
 
+
+---
+
+## Patch v1.1 — Critical Bug Fixes
+
+*Overnight results: 69 trades, W:37 L:32 (53% WR). Break-even protection and learning engine both working correctly. Execution layer had gaps — now patched.*
+
+### Bug 1: Stale Entry Prices
+**Problem:** Bot entered trades using candle close prices instead of live mid-prices. SL/TP calculated from wrong price level.
+**Fix:** Entries now use live Hyperliquid mid-price. SL and TP recalculated from actual execution price.
+
+### Bug 2: Re-Entry Spam
+**Problem:** After a stop-loss, bot immediately re-entered the same trade at the same price. SOL got stopped out 3x in a row within 2 minutes.
+**Fix:** Cooldown increased to 5 minutes. Added duplicate signal detection — blocks re-entry if same direction and price is within 0.05% of last signal.
+
+### Bug 3: Leverage Drift
+**Problem:** Crypto leverage had drifted to 40x instead of intended 20x, amplifying losses.
+**Fix:** Hard reset — BTC/ETH/SOL = 20x, BRENTOIL = 20x, GOLD = 15x. Enforced on startup.
+
+### Bug 4: SL Gap / Slippage Losses
+**Problem:** SOL entry at $87.27 with SL at $87.16, but exited at $86.72 — price gapped through the stop level. $2,509 loss.
+**Fix:** Slippage protection added. Bot rejects any entry where live price has moved >0.1% from signal price. Prevents entering fast-moving markets with stale data.
+
+### Updated Risk Parameters (v1.1)
+
+| Market | Leverage | Bet Size |
+|--------|----------|----------|
+| BTC | 20x | $10.00 |
+| ETH | 20x | $10.00 |
+| SOL | 20x | $10.00 |
+| BRENTOIL | 20x | $10.00 |
+| GOLD | 15x | $10.00 |
+
+| Parameter | Value |
+|-----------|-------|
+| Cooldown | 5 min between trades |
+| Max consecutive losses | 3 then pause |
+| SL cap | Never > 2x original |
+| Slippage rejection | > 0.1% = reject |
+
+**Lesson:** Strategy + learning engine performed well (53% WR, break-even triggers firing). But high-frequency leveraged perps need extremely tight execution controls. Small execution bugs → big losses. Now patched.
+
+*MrZMTradingBot v1.1 — March 2026*
+
