@@ -305,3 +305,79 @@ All guardrails are displayed on startup and logged with every learning adjustmen
 
 *MrZMTradingBot v1.1 — March 2026*
 
+
+---
+
+## Patch v1.2 — Community Feedback Response #2
+
+*Addressing 6 observations from The Trading Gym community*
+
+### Fix 1: Candle Close Signals (Biggest Impact)
+**Problem:** Bot recalculated RSI/EMA/BB every 2 seconds using live mid-candle close. Indicators were noisy and unstable — signals fired on incomplete data.
+**Fix:** Split the main loop into two distinct modes:
+- **Signal mode** — only runs on confirmed 5-min candle close (clean, stable indicators)
+- **Exit mode** — runs every 2 seconds (manages SL/TP/BE/trailing on open positions)
+
+This eliminates false entries from mid-candle noise while keeping exit management responsive.
+
+### Fix 2: Correlation Guard (Prevents Stacked Risk)
+**Problem:** Bot went LONG on BTC, ETH, and SOL simultaneously. All dropped together. At 20x each, that's effectively 60x directional exposure to one correlated move.
+**Fix:** Added correlation guard for crypto assets:
+- Max 1 same-direction crypto position at any time
+- If BTC is LONG, ETH/SOL can only open SHORT or skip
+- Commodities (BRENTOIL, GOLD) are independent — no correlation restriction
+
+```
+[GUARD] BTC LONG active → ETH LONG signal BLOCKED (correlated)
+[GUARD] BTC LONG active → GOLD LONG signal ALLOWED (uncorrelated)
+[GUARD] BTC LONG active → SOL SHORT signal ALLOWED (opposite direction)
+```
+
+### Fix 3: Per-Market Slippage Limits
+**Problem:** Flat 0.1% slippage threshold for all markets. BTC spread is ~0.003%, but SOL is 0.05-0.1% and commodities on xyz dex can be even wider. Bot was either rejecting valid commodity trades or accepting bad crypto entries.
+**Fix:** Per-market slippage thresholds:
+
+| Market | Slippage Limit | Typical Spread |
+|--------|---------------|----------------|
+| BTC | 0.05% | ~0.003% |
+| ETH | 0.05% | ~0.01% |
+| SOL | 0.15% | ~0.05-0.1% |
+| BRENTOIL | 0.30% | ~0.1-0.2% |
+| GOLD | 0.30% | ~0.1-0.2% |
+
+### Fix 4: Learning Engine Window Increase
+**Problem:** 100 buckets (5 markets × 10 patterns × 2 directions) sharing a 100-trade rolling window. Most buckets never reach the 15-trade minimum for learning to kick in.
+**Fix:** Rolling window increased from 100 → 500 trades. Combined with per-ticker isolation, each market now has ~100 trades in its own window across ~20 buckets — enough for meaningful pattern learning.
+
+```
+Before: 100 trades ÷ 100 buckets = ~1 trade per bucket (useless)
+After:  500 trades ÷ 20 buckets per market = ~25 trades per bucket ✅
+```
+
+### Tracked: Funding Rate Awareness (Not Yet Implemented)
+**Observation:** At 20x leverage, a -0.01% funding rate = -0.2% effective cost every 8 hours. Holding across 2-3 funding periods can turn a small win into a loss.
+**Status:** Not critical for current strategy — trades last minutes, rarely crossing a funding window. Will be added when hold times increase. Implementation plan:
+- Query Hyperliquid funding rate before entry
+- If negative funding > -0.03% and trade direction matches the paying side, reduce score by -1
+- Display current funding rates on dashboard
+
+### Tracked: WebSocket Migration (v2.0)
+**Observation:** WebSocket would give lower latency, lighter resources, and no rate-limit risk vs current REST polling.
+**Status:** Current REST polling works for testing phase. WebSocket planned for v2.0 as it requires async architecture refactor (aiohttp/websockets).
+
+### Updated Parameters (v1.2)
+
+| Parameter | v1.1 | v1.2 |
+|-----------|------|------|
+| Signal calculation | Every 2s (live) | On 5-min candle close only |
+| Exit management | Every 2s | Every 2s (unchanged) |
+| Rolling window | 100 trades | 500 trades |
+| Slippage (BTC/ETH) | 0.1% flat | 0.05% |
+| Slippage (SOL) | 0.1% flat | 0.15% |
+| Slippage (commodities) | 0.1% flat | 0.30% |
+| Crypto correlation | None | Max 1 same-direction |
+
+*Community feedback → shipped same day* 💪
+
+*MrZMTradingBot v1.2 — March 2026*
+
