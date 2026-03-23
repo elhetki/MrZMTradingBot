@@ -381,3 +381,82 @@ After:  500 trades ÷ 20 buckets per market = ~25 trades per bucket ✅
 
 *MrZMTradingBot v1.2 — March 2026*
 
+
+---
+
+## v2.0 — Major Upgrade: 26 Markets + Z.M Strategy
+
+*Massive expansion: from 5 markets to 26, new strategy engine, smart market hours, new dashboard.*
+
+### 26 Markets Across 4 Asset Classes
+
+| Class | Markets | Leverage |
+|-------|---------|----------|
+| **Crypto** | BTC, ETH, SOL | 40x |
+| **Commodities** | BRENT OIL, WTI, GOLD, SILVER, NATGAS, ALUMINIUM | 20-40x |
+| **Index** | S&P 500 | 20x |
+| **Stocks** | NVDA, TSLA, AAPL, MSFT, META, AMZN, GOOGL, AMD, NFLX, PLTR, ORCL, MSTR, COIN, HOOD, HIMS, BABA | 20x |
+
+One bot. 26 markets. Every asset class.
+
+### Z.M Strategy v2.0 — Integrated
+
+Zoran's A+ setup from The Trading Gym Manual is now coded directly into the bot:
+
+- **8 / 13 / 48 / 200 EMA system** — exact setup from the manual
+- **BOS & CHOCH detection** — Break of Structure and Change of Character for market structure analysis
+- **Supply & Demand zone entries** — institutional-level entry zones
+- **Volume confirmation** — filters strong moves from weak/fake moves
+- **Bull Flag / Bear Flag** — continuation pattern detection
+- **Smart position sizing** — lighter positions Monday/Friday, heavier Tuesday-Thursday (peak liquidity days)
+
+The bot now trades the way Zoran trades. Same confluences. Same rules.
+
+### Smart Market Hours
+
+The bot knows when each market is open and only scans during active sessions:
+
+| Market | Hours (UTC) |
+|--------|-------------|
+| Crypto | 24/7 — always scanning |
+| Commodities | Sun 22:00 → Fri 21:00 |
+| US Stocks | Mon-Fri 08:00 → 21:00 |
+
+No wasted scans on closed markets. No false signals on stale data.
+
+### Dashboard — Matrix Edition
+
+Full redesigned dashboard with hacker-style green Matrix rain aesthetic:
+- All 26 markets grouped by asset class with live prices, RSI, position status
+- P&L bar with win rate and open positions count
+- Trade history table + equity curve chart
+- Brain performance panel (learning engine stats)
+- Close button per position + Close All emergency button
+
+### Dry Run Results (v2.0)
+
+| Metric | Value |
+|--------|-------|
+| Total Trades | 94 |
+| Win Rate | 62.8% |
+| Wins | 59 |
+| Losses | 35 |
+| Total P&L | +$1.69 (at $10 bets) |
+
+Break-even protection working as designed — most wins exit at BE_STOP (+2%), protecting profits early. Losses controlled at -3% SL.
+
+### Roadmap
+
+- [x] Multi-market (26 assets)
+- [x] Z.M Strategy v2.0
+- [x] Market hours awareness
+- [x] Matrix dashboard
+- [x] Self-learning brain
+- [ ] Cloud deployment (bot runs 24/7 without PC)
+- [ ] Mobile dashboard access from anywhere
+- [ ] Live trading integration (Hyperliquid API wallet)
+- [ ] Telegram alerts (signals + trade notifications)
+- [ ] Backtesting engine for historical validation
+
+*MrZMTradingBot v2.0 — March 2026*
+
