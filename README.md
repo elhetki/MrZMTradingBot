@@ -460,3 +460,97 @@ Break-even protection working as designed — most wins exit at BE_STOP (+2%), p
 
 *MrZMTradingBot v2.0 — March 2026*
 
+
+---
+
+## Z.M Strategy Deep Dive
+
+*The exact A+ setup from The Trading Gym Manual — 20 years of screen time, automated.*
+
+### The 4-EMA System
+
+| EMA | Color | Role |
+|-----|-------|------|
+| 200 | 🔵 Blue | Long-term trend. Above = Bullish. Below = Bearish. |
+| 48 | 🔴 Red | Last line of defense. If it holds, we ride. |
+| 13 | 🟢 Green | Pullback entries above 200. Shorts below. |
+| 8 | 🟠 Orange | Trend indicator. Follow the 8, follow the money. |
+
+The bot reads all four EMAs together — exactly like Zoran does on the 2min and 15min charts.
+
+### A+ Setup — Full Confluence Required
+
+The bot only enters when the full stack aligns:
+
+1. ✅ Price above/below 200 EMA (trend direction)
+2. ✅ 13/48 EMA cross (momentum shift)
+3. ✅ Bounce off 48 EMA (last defense holds)
+4. ✅ 8 EMA trend confirmed (riding the wave)
+5. ✅ Bull Flag or Bear Flag (continuation pattern)
+6. ✅ Volume confirms the move (strong, not weak)
+7. ✅ Supply/Demand zone alignment
+
+No confluence = no trade. Period.
+*"Never make a random entry."* — Rule #2
+
+### Market Structure — BOS & CHOCH
+
+The bot reads market structure like it's taught in the manual:
+
+- **BOS** (Break of Structure) → Trend continuation. The bot rides it.
+- **CHOCH** (Change of Character) → Trend reversal. The bot catches the flip early, marks the demand/supply zone, and waits for the retrace to enter.
+
+Higher highs + higher lows = bullish BOS.
+Break of a higher low = CHOCH → bearish reversal.
+
+Based on pages 24-29 of The Trading Gym Manual.
+
+### Volume Confirmation Matrix
+
+| Price | Volume | Signal | Action |
+|-------|--------|--------|--------|
+| Up | Up | Strong bullish | ✅ Enter long |
+| Up | Down | Weak / fake | ❌ Skip |
+| Down | Up | Strong bearish | ✅ Enter short |
+| Down | Down | Weak / fake | ❌ Skip |
+
+The bot never enters weak moves. Only strong, volume-confirmed setups.
+
+### Z.M Position Sizing Rules
+
+| Day | Size | Reason |
+|-----|------|--------|
+| Monday | 70% | Warmup after weekend |
+| Tuesday | 100% | Golden zone — peak liquidity |
+| Wednesday | 100% | Golden zone |
+| Thursday | 100% | Golden zone |
+| Friday | 70% | *"Friday is profit taking day, because those guys wanna go long in some clubs or buy a new Rolex."* |
+| Weekend | 50% | Lower volume, wider spreads |
+
+First trade of the day: ALWAYS light.
+
+### Risk Management (v2.0)
+
+| Parameter | Value |
+|-----------|-------|
+| Stop Loss | -3% leveraged P&L |
+| Break-Even trigger | +2% (green trade never goes red) |
+| Partial close | 2/3 at +5% |
+| Trailing stop | 2% after partial |
+| Take Profit | +8% |
+| Max positions | 3 simultaneous |
+| Learning window | 500 trades rolling |
+
+*"NEVER LET YOUR GREEN CANDLE BECOME RED."* — Rule #1
+
+### What Makes This Different
+
+This bot isn't built from a YouTube tutorial or ChatGPT template. It's built from 20 years of screen time. Every rule, every EMA, every confluence comes from real trades, real losses, and real lessons — the same ones in The Trading Gym Manual.
+
+It trades the way Zoran trades. It thinks the way he thinks. It follows the rules he follows. And it does it 24/7 without fear, without FOMO, and without emotion.
+
+*"Your biggest enemy in trading is you."*
+This bot doesn't have that problem.
+
+*MrZMTradingBot v2.0 — The Z.M Update — March 2026*
+
