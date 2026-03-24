@@ -2,9 +2,12 @@ __pycache__/
 *.py[cod]
 *.so
 .env
+.env.secrets
 *.log
 learnings.json
 trade_history.json
+backtest_results.json
+alerts.log
 venv/
 .venv/
 *.egg-info/
@@ -12,3 +15,5 @@ dist/
 build/
 .idea/
 .vscode/
+logs/
+config.local.json

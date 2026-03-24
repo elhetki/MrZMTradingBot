@@ -1,0 +1,259 @@
+{
+  "_comment": "MahmudBot v1.0 — Z.M Trading Gym Strategy — Hyperliquid Perpetuals",
+
+  "dry_run": true,
+  "testnet": false,
+
+  "wallet_address": "",
+  "api_wallet_address": "",
+  "private_key": "",
+
+  "bet_size": 10.0,
+  "max_positions": 3,
+  "daily_loss_cap": 50.0,
+  "consecutive_loss_limit": 3,
+  "cooldown_seconds": 300,
+
+  "scoring": {
+    "min_score": 7,
+    "min_probability": 0.72
+  },
+
+  "exit": {
+    "sl_pct": -3.5,
+    "tp_pct": 10.5,
+    "use_simple_exits": true,
+    "_v25_note": "v2.5: Clean SL/TP only. No break-even, no partial closes. Either TP or SL."
+  },
+
+  "day_sizing": {
+    "0": 0.7,
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "4": 0.7,
+    "5": 0.5,
+    "6": 0.5
+  },
+
+  "ema_periods": [8, 13, 48, 200],
+
+  "rsi_period": 14,
+  "rsi_oversold": 35,
+  "rsi_overbought": 65,
+  "bb_period": 20,
+  "bb_std": 2.0,
+
+  "markets": {
+    "BTC": {
+      "enabled": true,
+      "asset_class": "crypto",
+      "leverage": 40,
+      "slippage_limit": 0.0005
+    },
+    "ETH": {
+      "enabled": true,
+      "asset_class": "crypto",
+      "leverage": 40,
+      "slippage_limit": 0.0005
+    },
+    "SOL": {
+      "enabled": true,
+      "asset_class": "crypto",
+      "leverage": 40,
+      "slippage_limit": 0.0015
+    },
+    "BNB": {
+      "enabled": false,
+      "asset_class": "crypto",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "WTI": {
+      "enabled": false,
+      "asset_class": "commodity",
+      "leverage": 20,
+      "slippage_limit": 0.003,
+      "_note": "Not available on Hyperliquid"
+    },
+    "BRENT": {
+      "enabled": false,
+      "asset_class": "commodity",
+      "leverage": 20,
+      "slippage_limit": 0.003,
+      "_note": "Not available on Hyperliquid"
+    },
+    "XAU": {
+      "enabled": false,
+      "asset_class": "commodity",
+      "leverage": 20,
+      "slippage_limit": 0.003,
+      "_note": "Not available on Hyperliquid"
+    },
+    "DOGE": {
+      "enabled": true,
+      "asset_class": "crypto",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "AVAX": {
+      "enabled": true,
+      "asset_class": "crypto",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "LINK": {
+      "enabled": true,
+      "asset_class": "crypto",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "XAG": {
+      "enabled": false,
+      "asset_class": "commodity",
+      "leverage": 20,
+      "slippage_limit": 0.003
+    },
+    "SPX": {
+      "enabled": false,
+      "asset_class": "index",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "NVDA": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "TSLA": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "AAPL": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "MSFT": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "META": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "AMZN": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "GOOGL": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "AMD": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "NFLX": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "PLTR": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "ORCL": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "MSTR": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "COIN": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "HOOD": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "HIMS": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    },
+    "BABA": {
+      "enabled": false,
+      "asset_class": "stock",
+      "leverage": 20,
+      "slippage_limit": 0.002
+    }
+  },
+
+  "market_hours": {
+    "crypto": {
+      "always_open": true
+    },
+    "commodity": {
+      "always_open": false,
+      "open_utc": "22:00",
+      "close_utc": "21:00",
+      "open_day": "Sunday",
+      "close_day": "Friday"
+    },
+    "index": {
+      "always_open": false,
+      "open_utc": "08:00",
+      "close_utc": "21:00",
+      "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    },
+    "stock": {
+      "always_open": false,
+      "open_utc": "08:00",
+      "close_utc": "21:00",
+      "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    }
+  },
+
+  "backtest": {
+    "lookback_months": 6,
+    "candle_interval": "5m",
+    "fee_rate": 0.00045,
+    "slippage_estimate": 0.001,
+    "initial_capital": 10000.0
+  },
+
+  "learnings_file": "learnings.json",
+  "log_dir": "logs",
+  "dashboard_port": 8888,
+  "exit_check_interval": 2,
+  "signal_candle_interval": "1m"
+}
