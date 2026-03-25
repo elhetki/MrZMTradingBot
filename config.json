@@ -22,10 +22,11 @@
   "exit": {
     "sl_pct": -3.5,
     "tp_pct": 10.5,
+    "hard_stop_pct": -5.25,
     "use_simple_exits": true,
     "funding_guard": true,
     "funding_guard_minutes": 5,
-    "_v25_note": "v2.5: Clean SL/TP only + funding guard. No interest ever."
+    "_v25_note": "v2.5: Clean SL/TP + hard stop safety net + funding guard. No interest ever."
   },
 
   "day_sizing": {
@@ -276,6 +277,17 @@
     "fee_rate": 0.00045,
     "slippage_estimate": 0.001,
     "initial_capital": 10000.0
+  },
+
+  "chop_filter": {
+    "enabled": true,
+    "lookback": 20,
+    "min_triggers": 2,
+    "range_threshold": 3.0,
+    "squeeze_threshold": 0.15,
+    "bb_width_threshold": 1.5,
+    "bb_period": 20,
+    "bb_std": 2.0
   },
 
   "mtf": {

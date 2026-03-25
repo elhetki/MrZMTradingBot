@@ -31,6 +31,7 @@ from strategy.structure import BOSCHOCHDetector
 from strategy.zones import SupplyDemandZones
 from strategy.mtf import MTFFilter
 from strategy.orderbook import OrderBookIntelligence
+from strategy.chop_filter import ChopFilter
 from exchange.dry_run import DryRunEngine
 from utils.risk_manager import RiskManager
 from utils.learning_brain import LearningBrain
@@ -83,14 +84,16 @@ class MahmudBot:
         self._hl_client = HyperliquidClient(config)
 
         # v2.5+ Intelligence layers
+        self.chop_filter = ChopFilter(config)
         self.mtf_filter = MTFFilter(config, hl_client=self._hl_client)
         self.orderbook = OrderBookIntelligence(config, hl_client=self._hl_client)
         self.sentiment = NewsSentiment(config, hl_client=self._hl_client)
 
+        chop_status = "ON" if config.get("chop_filter", {}).get("enabled", True) else "OFF"
         mtf_status = "ON" if config.get("mtf", {}).get("enabled", True) else "OFF"
         ob_status = "ON" if config.get("orderbook", {}).get("enabled", True) else "OFF"
         sent_status = "ON" if config.get("sentiment", {}).get("enabled", True) else "OFF"
-        logger.info(f"🧠 Intelligence layers: MTF={mtf_status} | WOBI={ob_status} | Sentiment={sent_status}")
+        logger.info(f"🧠 Intelligence layers: Chop={chop_status} | MTF={mtf_status} | WOBI={ob_status} | Sentiment={sent_status}")
 
         # Execution engine
         if self.dry_run:
@@ -183,6 +186,12 @@ class MahmudBot:
             # Update zones
             self._update_zones(ticker, df)
             zones = self._zone_cache.get(ticker, [])
+
+            # ── v2.5+ Layer 0: Chop Filter (before anything else) ────
+            chop_result = self.chop_filter.check(df)
+            if chop_result.is_choppy:
+                logger.debug(f"Chop filter blocked {ticker}: {chop_result.summary()}")
+                continue
 
             # ── v2.5+ Layer 1: Multi-Timeframe Filter ────────────────
             # Quick pre-check: determine likely direction from 200 EMA before full eval
@@ -344,9 +353,12 @@ class MahmudBot:
         logger.info(f"   Markets: {len(self.markets)}")
         logger.info(f"   Interval: {self.interval}")
         logger.info(f"   Bet Size: ${self.config.get('bet_size', 10)}")
+        logger.info(f"   Chop Filter: 3-check ({self.chop_filter.min_triggers}/3 to block)")
         logger.info(f"   MTF: {', '.join(self.mtf_filter.higher_timeframes)} ({self.mtf_filter.min_agreement}/{len(self.mtf_filter.higher_timeframes)} agree)")
         logger.info(f"   WOBI: depth={self.orderbook.depth}, threshold=±{self.orderbook.wobi_threshold}")
-        logger.info(f"   Sentiment: funding + F&G index")
+        logger.info(f"   Hard Stop: {self.exit_manager.hard_stop_pct}% max loss")
+        logger.info(f"   Patterns: 23 active")
+        logger.info(f"   Prob Cap: 75% max (honest probability)")
         logger.info("="*60 + "\n")
 
         # Signal scan interval based on candle size

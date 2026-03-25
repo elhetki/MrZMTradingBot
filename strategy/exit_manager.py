@@ -88,6 +88,7 @@ class ExitManager:
         exit_cfg = config.get("exit", {})
         self.sl_pct = exit_cfg.get("sl_pct", -3.5)            # -3.5%
         self.tp_pct = exit_cfg.get("tp_pct", 10.5)            # +10.5%
+        self.hard_stop_pct = exit_cfg.get("hard_stop_pct", -5.25)  # v2.5: absolute max loss safety net
         self.use_simple = exit_cfg.get("use_simple_exits", True)
         self.funding_guard = exit_cfg.get("funding_guard", True)
         self.funding_guard_minutes = exit_cfg.get("funding_guard_minutes", 5)  # Close 5 min before :00
@@ -123,6 +124,17 @@ class ExitManager:
                 action="CLOSE_FULL",
                 position_id=position.id,
                 reason=f"✅ TP hit! +{pnl_pct:.1f}% (target: +{self.tp_pct}%)",
+                stage=ExitStage.CLOSED,
+            )
+
+        # ── Hard Stop (safety net) ────────────────────────────────────
+        # v2.5: Even if price gaps through SL, this catches it.
+        # A -15% loss can never happen again.
+        if pnl_pct <= self.hard_stop_pct:
+            return ExitAction(
+                action="CLOSE_FULL",
+                position_id=position.id,
+                reason=f"🛑 HARD STOP hit! {pnl_pct:.1f}% (max loss: {self.hard_stop_pct}%) — emergency close",
                 stage=ExitStage.CLOSED,
             )
 

@@ -23,6 +23,7 @@ import pandas as pd
 import numpy as np
 
 from .ema import EMACalculator, EMAValues
+from .patterns import PatternDetector
 
 
 @dataclass
@@ -68,6 +69,7 @@ class ScoringEngine:
         self.min_score = min_score
         self.min_probability = min_probability
         self._ema = EMACalculator()
+        self._pattern_detector = PatternDetector()
 
     # ──────────────────────── RSI ────────────────────────
 
@@ -247,12 +249,8 @@ class ScoringEngine:
         except Exception:
             result.reasons.append("BB calculation failed")
 
-        # 5. Chart pattern — engulfing (+3) or flag (+2)
-        eng_pts, eng_reason = self._detect_engulfing(df)
-        flag_pts, flag_reason = self._detect_flag(df, direction)
-        # Take the higher of the two
-        pattern_pts = max(eng_pts, flag_pts)
-        pattern_reason = eng_reason if eng_pts >= flag_pts else flag_reason
+        # 5. Chart pattern — 23 patterns via PatternDetector (+1 to +3)
+        pattern_pts, pattern_reason = self._pattern_detector.best_pattern(df, direction)
         result.chart_pattern_score = pattern_pts
         result.total += pattern_pts
         result.reasons.append(pattern_reason)
@@ -264,10 +262,12 @@ class ScoringEngine:
         result.reasons.append(reason)
 
         # Calculate probability estimate
-        # Simple linear map: score 5 → 65%, score 16 (max) → 90%
+        # Simple linear map: score 5 → 65%, score 16 (max) → 75%
+        # v2.5 HONEST PROBABILITY: capped at 75% max. No fake confidence.
         # Base signals: 2+2+3+2+3+1 = 13, WOBI: +2, sentiment: +1 = 16 max
         max_possible = 2 + 2 + 3 + 2 + 3 + 1 + 2 + 1  # = 16
         clamped = max(0, min(result.total, max_possible))
-        result.probability = 0.50 + (clamped / max_possible) * 0.45
+        raw_prob = 0.50 + (clamped / max_possible) * 0.35  # 50% base + up to 35%
+        result.probability = min(raw_prob, 0.75)  # HARD CAP at 75%
 
         return result

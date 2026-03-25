@@ -238,10 +238,11 @@ class EntryLogic:
             else:
                 signal.checks_failed.append(f"sentiment: {sentiment_reason}")
 
-        # Recalculate probability with updated total
+        # Recalculate probability with updated total — capped at 75%
         max_possible = 16
         clamped = max(0, min(score.total, max_possible))
-        score.probability = 0.50 + (clamped / max_possible) * 0.45
+        raw_prob = 0.50 + (clamped / max_possible) * 0.35
+        score.probability = min(raw_prob, 0.75)  # HARD CAP at 75%
 
         # ── Minimum Score + Probability Filter ───────────────────────────
         if not score.passes(self.min_score, self.min_probability):
