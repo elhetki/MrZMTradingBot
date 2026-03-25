@@ -99,3 +99,47 @@ def alert_daily_summary(
         f"📂 Open: {open_positions}"
     )
     send_alert(msg)
+
+
+def alert_30min_stats(
+    equity: float,
+    daily_pnl: float,
+    total_pnl: float,
+    total_trades: int,
+    wins: int,
+    losses: int,
+    win_rate: float,
+    open_positions: int,
+    markets_scanned: int,
+    chop_blocked: int = 0,
+    mtf_blocked: int = 0,
+    per_market: dict = None,
+):
+    """Auto stats report every 30 minutes — like Zoran's bot."""
+    lines = [
+        "═══════════════════════════════",
+        "📊 30-MIN STATUS REPORT",
+        "═══════════════════════════════",
+        f"💎 Equity: ${equity:,.2f}",
+        f"📈 Session P&L: ${total_pnl:+.2f}",
+        f"📅 Today P&L: ${daily_pnl:+.2f}",
+        f"🎯 Trades: {total_trades} (W:{wins} L:{losses} | {win_rate:.0%} WR)",
+        f"📂 Open positions: {open_positions}",
+        f"🔍 Markets scanned: {markets_scanned}",
+    ]
+    if chop_blocked > 0 or mtf_blocked > 0:
+        lines.append(f"🚫 Filtered: Chop={chop_blocked} | MTF={mtf_blocked}")
+
+    if per_market:
+        lines.append("")
+        lines.append("Per-market breakdown:")
+        for ticker, data in per_market.items():
+            trades = data.get("trades", 0)
+            pnl = data.get("pnl", 0)
+            wr = data.get("win_rate", 0)
+            direction = data.get("bias", "—")
+            if trades > 0:
+                lines.append(f"  {ticker}: {trades} trades | ${pnl:+.2f} | {wr:.0%} WR | bias: {direction}")
+
+    lines.append("═══════════════════════════════")
+    send_alert("\n".join(lines))

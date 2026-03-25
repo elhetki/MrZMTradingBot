@@ -118,23 +118,23 @@ class ExitManager:
                     stage=ExitStage.CLOSED,
                 )
 
+        # ── HARD STOP — absolute safety net (checked FIRST) ─────────
+        # v2.5: Even if price gaps through SL, this catches it.
+        # A -15% loss can never happen again. Max loss: -5.25%.
+        if pnl_pct <= self.hard_stop_pct:
+            return ExitAction(
+                action="CLOSE_FULL",
+                position_id=position.id,
+                reason=f"🚨 HARD STOP! {pnl_pct:.1f}% (max: {self.hard_stop_pct}%) — emergency exit",
+                stage=ExitStage.CLOSED,
+            )
+
         # ── Take Profit ──────────────────────────────────────────────
         if pnl_pct >= self.tp_pct:
             return ExitAction(
                 action="CLOSE_FULL",
                 position_id=position.id,
                 reason=f"✅ TP hit! +{pnl_pct:.1f}% (target: +{self.tp_pct}%)",
-                stage=ExitStage.CLOSED,
-            )
-
-        # ── Hard Stop (safety net) ────────────────────────────────────
-        # v2.5: Even if price gaps through SL, this catches it.
-        # A -15% loss can never happen again.
-        if pnl_pct <= self.hard_stop_pct:
-            return ExitAction(
-                action="CLOSE_FULL",
-                position_id=position.id,
-                reason=f"🛑 HARD STOP hit! {pnl_pct:.1f}% (max loss: {self.hard_stop_pct}%) — emergency close",
                 stage=ExitStage.CLOSED,
             )
 

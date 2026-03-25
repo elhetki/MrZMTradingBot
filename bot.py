@@ -191,6 +191,7 @@ class MahmudBot:
             chop_result = self.chop_filter.check(df)
             if chop_result.is_choppy:
                 logger.debug(f"Chop filter blocked {ticker}: {chop_result.summary()}")
+                self._chop_blocked += 1
                 continue
 
             # ── v2.5+ Layer 1: Multi-Timeframe Filter ────────────────
@@ -205,6 +206,7 @@ class MahmudBot:
             mtf_result = self.mtf_filter.check(ticker, likely_direction)
             if not mtf_result.allowed:
                 logger.debug(f"MTF blocked {ticker} {likely_direction}: {mtf_result.reason}")
+                self._mtf_blocked += 1
                 continue
 
             # ── v2.5+ Layer 2: Order Book Intelligence ────────────────
@@ -343,6 +345,51 @@ class MahmudBot:
                 f"Open: {open_pos}"
             )
 
+    def _send_30min_report(self):
+        """Send 30-minute auto stats report to Telegram."""
+        if not self.dry_run:
+            return  # TODO: live stats
+
+        stats = self.engine.get_stats()
+
+        # Per-market breakdown from trade history
+        per_market = {}
+        for trade in self.engine.trade_history:
+            t = trade.ticker
+            if t not in per_market:
+                per_market[t] = {"trades": 0, "pnl": 0, "wins": 0, "losses": 0}
+            per_market[t]["trades"] += 1
+            per_market[t]["pnl"] += trade.pnl_usd
+            if trade.pnl_usd > 0:
+                per_market[t]["wins"] += 1
+            else:
+                per_market[t]["losses"] += 1
+
+        for t, d in per_market.items():
+            d["win_rate"] = d["wins"] / d["trades"] if d["trades"] > 0 else 0
+            # Direction bias from learning brain
+            bias = self.learning_brain.get_direction_bias(t)
+            d["bias"] = "LONG" if bias > 2 else ("SHORT" if bias < -2 else "NEUTRAL")
+
+        from utils.telegram_alerts import alert_30min_stats
+        alert_30min_stats(
+            equity=stats["equity"],
+            daily_pnl=stats["daily_pnl"],
+            total_pnl=stats["total_pnl"],
+            total_trades=stats["total_trades"],
+            wins=stats["wins"],
+            losses=stats["losses"],
+            win_rate=stats["win_rate"],
+            open_positions=stats["open_positions"],
+            markets_scanned=len(self.markets),
+            chop_blocked=self._chop_blocked,
+            mtf_blocked=self._mtf_blocked,
+            per_market=per_market if per_market else None,
+        )
+        # Reset counters
+        self._chop_blocked = 0
+        self._mtf_blocked = 0
+
     def run(self):
         """Main bot loop."""
         global _running
@@ -370,6 +417,10 @@ class MahmudBot:
         last_scan = 0
         status_interval = 60  # Print status every 60 seconds
         last_status = 0
+        report_interval = 1800  # 30-min auto stats report
+        last_report = 0
+        self._chop_blocked = 0
+        self._mtf_blocked = 0
 
         while _running:
             now = time.time()
@@ -392,6 +443,11 @@ class MahmudBot:
             if now - last_status >= status_interval:
                 self.print_status()
                 last_status = now
+
+            # 30-min auto stats report
+            if now - last_report >= report_interval:
+                self._send_30min_report()
+                last_report = now
 
             time.sleep(self.exit_check_interval)
 
