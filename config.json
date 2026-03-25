@@ -15,8 +15,8 @@
   "cooldown_seconds": 300,
 
   "scoring": {
-    "min_score": 7,
-    "min_probability": 0.72
+    "min_score": 6,
+    "min_probability": 0.70
   },
 
   "exit": {

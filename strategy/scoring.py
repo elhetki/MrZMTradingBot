@@ -262,12 +262,17 @@ class ScoringEngine:
         result.reasons.append(reason)
 
         # Calculate probability estimate
-        # Simple linear map: score 5 → 65%, score 16 (max) → 75%
         # v2.5 HONEST PROBABILITY: capped at 75% max. No fake confidence.
-        # Base signals: 2+2+3+2+3+1 = 13, WOBI: +2, sentiment: +1 = 16 max
-        max_possible = 2 + 2 + 3 + 2 + 3 + 1 + 2 + 1  # = 16
+        # Map: score 0→50%, score 6(min)→70%, score 16(max)→75%
+        # This ensures min_score=6 at min_prob=0.70 is achievable
+        max_possible = 16
         clamped = max(0, min(result.total, max_possible))
-        raw_prob = 0.50 + (clamped / max_possible) * 0.35  # 50% base + up to 35%
+        if clamped <= 6:
+            # Linear ramp: 0→50%, 6→70%
+            raw_prob = 0.50 + (clamped / 6) * 0.20
+        else:
+            # Linear ramp: 6→70%, 16→75%
+            raw_prob = 0.70 + ((clamped - 6) / (max_possible - 6)) * 0.05
         result.probability = min(raw_prob, 0.75)  # HARD CAP at 75%
 
         return result
