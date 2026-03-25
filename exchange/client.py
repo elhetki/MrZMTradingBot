@@ -20,6 +20,7 @@ INTERVAL_MAP = {
     "3m": "3m",
     "5m": "5m",
     "15m": "15m",
+    "30m": "30m",
     "1h": "1h",
     "4h": "240",
     "1d": "D",
@@ -169,6 +170,7 @@ class HyperliquidClient:
             "4h": 14_400_000,
             "1d": 86_400_000,
         }
+        # Note: 30m was already here in ms map but was missing from INTERVAL_MAP above
         return mapping.get(interval, 300_000)
 
     def get_price(self, ticker: str) -> Optional[float]:
