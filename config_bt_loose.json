@@ -1,24 +1,19 @@
 {
-  "_comment": "MahmudBot v1.0 — Z.M Trading Gym Strategy — Hyperliquid Perpetuals",
-
+  "_comment": "MahmudBot v1.0 \u2014 Z.M Trading Gym Strategy \u2014 Hyperliquid Perpetuals",
   "dry_run": true,
   "testnet": false,
-
   "wallet_address": "0xC19795B8Ec4fdcf9452CB7536f3365183927c1D7",
   "api_wallet_address": "0xDa239a7261e9C9f9B69c647eAFaa915aa555b5dd",
   "private_key": "ENV:HL_API_PRIVATE_KEY",
-
   "bet_size": 10.0,
   "max_positions": 3,
   "daily_loss_cap": 50.0,
   "consecutive_loss_limit": 3,
   "cooldown_seconds": 300,
-
   "scoring": {
-    "min_score": 7,
-    "min_probability": 0.72
+    "min_score": 3,
+    "min_probability": 0.5
   },
-
   "exit": {
     "sl_pct": -3.5,
     "tp_pct": 10.5,
@@ -27,7 +22,6 @@
     "funding_guard_minutes": 5,
     "_v25_note": "v2.5: Clean SL/TP only + funding guard. No interest ever."
   },
-
   "day_sizing": {
     "0": 0.7,
     "1": 1.0,
@@ -37,15 +31,17 @@
     "5": 0.5,
     "6": 0.5
   },
-
-  "ema_periods": [8, 13, 48, 200],
-
+  "ema_periods": [
+    8,
+    13,
+    48,
+    200
+  ],
   "rsi_period": 14,
   "rsi_oversold": 35,
   "rsi_overbought": 65,
   "bb_period": 20,
   "bb_std": 2.0,
-
   "markets": {
     "BTC": {
       "enabled": true,
@@ -115,31 +111,6 @@
       "asset_class": "commodity",
       "leverage": 20,
       "slippage_limit": 0.003
-    },
-    "PAXG": {
-      "enabled": true,
-      "asset_class": "commodity",
-      "leverage": 10,
-      "slippage_limit": 0.003,
-      "_note": "Tokenized Gold on Hyperliquid"
-    },
-    "GAS": {
-      "enabled": true,
-      "asset_class": "commodity",
-      "leverage": 3,
-      "slippage_limit": 0.005
-    },
-    "HYPE": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "SUI": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 20,
-      "slippage_limit": 0.002
     },
     "SPX": {
       "enabled": false,
@@ -244,7 +215,6 @@
       "slippage_limit": 0.002
     }
   },
-
   "market_hours": {
     "crypto": {
       "always_open": true
@@ -260,16 +230,27 @@
       "always_open": false,
       "open_utc": "08:00",
       "close_utc": "21:00",
-      "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+      "days": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday"
+      ]
     },
     "stock": {
       "always_open": false,
       "open_utc": "08:00",
       "close_utc": "21:00",
-      "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+      "days": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday"
+      ]
     }
   },
-
   "backtest": {
     "lookback_months": 6,
     "candle_interval": "5m",
@@ -277,34 +258,9 @@
     "slippage_estimate": 0.001,
     "initial_capital": 10000.0
   },
-
-  "mtf": {
-    "enabled": true,
-    "higher_timeframes": ["15m", "30m", "1h"],
-    "min_agreement": 2,
-    "ema_period": 200
-  },
-
-  "orderbook": {
-    "enabled": true,
-    "depth": 20,
-    "wobi_threshold": 0.3,
-    "wall_multiplier": 3.0,
-    "refresh_seconds": 2,
-    "score_points": 2
-  },
-
-  "sentiment": {
-    "enabled": true,
-    "funding_rate_extreme": 0.0001,
-    "fear_greed_enabled": true,
-    "fear_greed_url": "https://api.alternative.me/fng/",
-    "refresh_seconds": 3600
-  },
-
   "learnings_file": "learnings.json",
   "log_dir": "logs",
   "dashboard_port": 8888,
   "exit_check_interval": 2,
-  "signal_candle_interval": "5m"
+  "signal_candle_interval": "1m"
 }

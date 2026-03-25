@@ -1,16 +1,20 @@
 """
-Exit Manager v2.5 — Clean SL/TP Only
+Exit Manager v2.5 — Clean SL/TP Only + Funding Guard
 No break-even. No partial closes. Either TP or SL. Clean.
 
 SL: -3.5% leveraged P&L (cut the loser)
 TP: +10.5% leveraged P&L (let the winner run)
 R/R: 1:3. Math > emotion.
+
+Funding Guard: Close all positions 5 minutes before the hour.
+Never hold through a funding tick. Zero riba.
 """
 
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
+from datetime import datetime, timezone
 import time
 
 
@@ -85,6 +89,8 @@ class ExitManager:
         self.sl_pct = exit_cfg.get("sl_pct", -3.5)            # -3.5%
         self.tp_pct = exit_cfg.get("tp_pct", 10.5)            # +10.5%
         self.use_simple = exit_cfg.get("use_simple_exits", True)
+        self.funding_guard = exit_cfg.get("funding_guard", True)
+        self.funding_guard_minutes = exit_cfg.get("funding_guard_minutes", 5)  # Close 5 min before :00
 
     def check(self, position: Position, current_price: float) -> ExitAction:
         """
@@ -98,6 +104,18 @@ class ExitManager:
         # Update peak P&L tracking
         if pnl_pct > position.peak_pnl_pct:
             position.peak_pnl_pct = pnl_pct
+
+        # ── Funding Guard — close before the hour ─────────────────────
+        if self.funding_guard:
+            now = datetime.now(timezone.utc)
+            minutes_to_hour = 60 - now.minute
+            if minutes_to_hour <= self.funding_guard_minutes and now.minute >= (60 - self.funding_guard_minutes):
+                return ExitAction(
+                    action="CLOSE_FULL",
+                    position_id=position.id,
+                    reason=f"🕐 Funding guard: closing at :{now.minute:02d} ({minutes_to_hour}min to funding tick). P&L: {pnl_pct:+.1f}%",
+                    stage=ExitStage.CLOSED,
+                )
 
         # ── Take Profit ──────────────────────────────────────────────
         if pnl_pct >= self.tp_pct:

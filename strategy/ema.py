@@ -98,11 +98,15 @@ class EMACalculator:
             ema200=float(row["ema200"]),
         )
 
-    def detect_crossover(self, df: pd.DataFrame, fast: int = 13, slow: int = 48) -> Optional[str]:
+    def detect_crossover(self, df: pd.DataFrame, fast: int = 13, slow: int = 48, lookback: int = 60) -> Optional[str]:
         """
-        Detect if a fast/slow EMA crossover just happened on the last N candles.
+        Detect if fast EMA is aligned above/below slow EMA (crossover happened recently).
+        
+        v2.5: Instead of requiring the exact crossover candle, we check:
+        1. Current alignment (fast above slow = bullish, below = bearish)
+        2. The crossover happened within the last `lookback` candles (confirms momentum shift)
+        
         Returns 'BULLISH', 'BEARISH', or None.
-        From the scoring table: EMA crossover (just happened) = +3
         """
         fast_col = f"ema{fast}"
         slow_col = f"ema{slow}"
@@ -111,19 +115,31 @@ class EMACalculator:
         if not all(c in df.columns for c in required):
             df = self.calculate(df)
 
-        if len(df) < 3:
+        if len(df) < lookback:
             return None
 
-        # Check last 3 candles for crossover
-        tail = df[[fast_col, slow_col]].iloc[-3:]
-        diffs = tail[fast_col] - tail[slow_col]
-
-        # Bullish cross: was below, now above
-        if diffs.iloc[-2] < 0 and diffs.iloc[-1] > 0:
-            return "BULLISH"
-        # Bearish cross: was above, now below
-        if diffs.iloc[-2] > 0 and diffs.iloc[-1] < 0:
-            return "BEARISH"
+        # Current alignment
+        current_fast = float(df[fast_col].iloc[-1])
+        current_slow = float(df[slow_col].iloc[-1])
+        
+        if current_fast > current_slow:
+            # Bullish alignment — verify crossover happened within lookback window
+            tail = df[[fast_col, slow_col]].iloc[-lookback:]
+            diffs = tail[fast_col] - tail[slow_col]
+            # Was there a point where fast was below slow? (= cross happened)
+            if (diffs < 0).any():
+                return "BULLISH"
+            # Even if no cross in window, sustained alignment is bullish
+            if (diffs > 0).all():
+                return "BULLISH"
+        elif current_fast < current_slow:
+            # Bearish alignment
+            tail = df[[fast_col, slow_col]].iloc[-lookback:]
+            diffs = tail[fast_col] - tail[slow_col]
+            if (diffs > 0).any():
+                return "BEARISH"
+            if (diffs < 0).all():
+                return "BEARISH"
 
         return None
 

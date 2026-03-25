@@ -10,6 +10,10 @@ Signal Scoring Table:
   Chart pattern (engulfing, S/D bounce) → +3
   Chart pattern (flag, triangle, mom)   → +2
   Price momentum confirmation           → +1
+  WOBI order book confirmation          → +2  (v2.5+)
+  Sentiment (funding + F&G)             → ±1  (v2.5+)
+
+Max possible: 16 points (was 13)
 """
 
 from __future__ import annotations
@@ -30,6 +34,8 @@ class ScoreBreakdown:
     bb_score: int = 0
     chart_pattern_score: int = 0
     momentum_score: int = 0
+    wobi_score: int = 0          # v2.5+: Order book confirmation
+    sentiment_score: int = 0     # v2.5+: Funding + Fear & Greed
     probability: float = 0.0
     direction: str = "NEUTRAL"  # 'LONG' or 'SHORT' or 'NEUTRAL'
     reasons: list[str] = field(default_factory=list)
@@ -258,8 +264,9 @@ class ScoringEngine:
         result.reasons.append(reason)
 
         # Calculate probability estimate
-        # Simple linear map: score 5 → 65%, score 14 (max) → 90%
-        max_possible = 2 + 2 + 3 + 2 + 3 + 1  # = 13
+        # Simple linear map: score 5 → 65%, score 16 (max) → 90%
+        # Base signals: 2+2+3+2+3+1 = 13, WOBI: +2, sentiment: +1 = 16 max
+        max_possible = 2 + 2 + 3 + 2 + 3 + 1 + 2 + 1  # = 16
         clamped = max(0, min(result.total, max_possible))
         result.probability = 0.50 + (clamped / max_possible) * 0.45
 

@@ -37,6 +37,9 @@ class EntrySignal:
     structure_event: Optional[StructureEvent] = None
     nearest_zone: Optional[Zone] = None
     ema_values: EMAValues = None
+    mtf_blocked: bool = False      # v2.5+: blocked by multi-timeframe filter
+    wobi_score: int = 0            # v2.5+: order book score contribution
+    sentiment_score: int = 0       # v2.5+: sentiment score contribution
 
     checks_passed: dict = field(default_factory=dict)
     checks_failed: list[str] = field(default_factory=list)
@@ -91,14 +94,22 @@ class EntryLogic:
         df: pd.DataFrame,
         ticker: str,
         active_zones: Optional[list[Zone]] = None,
+        wobi_score: int = 0,
+        wobi_reason: str = "",
+        sentiment_score: int = 0,
+        sentiment_reason: str = "",
     ) -> EntrySignal:
         """
-        Run the full 7-condition confluence check.
+        Run the full 7-condition confluence check + WOBI/sentiment scoring.
 
         Args:
             df: OHLCV DataFrame with at least 250 candles (5m timeframe)
             ticker: Market symbol
             active_zones: Pre-built S/D zones (or None to build from data)
+            wobi_score: Order book score contribution (0 or +2)
+            wobi_reason: Order book reason string
+            sentiment_score: Sentiment score contribution (±1)
+            sentiment_reason: Sentiment reason string
 
         Returns:
             EntrySignal (valid=True only if all conditions pass)
@@ -208,6 +219,29 @@ class EntryLogic:
                 signal.checks_failed.append(f"sd_zone: no active {zone_kind} zone near price")
                 signal.skip_reason = f"No {zone_kind} zone alignment"
                 return signal
+
+        # ── WOBI + Sentiment Score Integration (v2.5+) ────────────────────
+        if wobi_score != 0:
+            score.wobi_score = wobi_score
+            score.total += wobi_score
+            score.reasons.append(wobi_reason)
+            signal.wobi_score = wobi_score
+            signal.checks_passed["wobi"] = wobi_reason
+
+        if sentiment_score != 0:
+            score.sentiment_score = sentiment_score
+            score.total += sentiment_score
+            score.reasons.append(sentiment_reason)
+            signal.sentiment_score = sentiment_score
+            if sentiment_score > 0:
+                signal.checks_passed["sentiment"] = sentiment_reason
+            else:
+                signal.checks_failed.append(f"sentiment: {sentiment_reason}")
+
+        # Recalculate probability with updated total
+        max_possible = 16
+        clamped = max(0, min(score.total, max_possible))
+        score.probability = 0.50 + (clamped / max_possible) * 0.45
 
         # ── Minimum Score + Probability Filter ───────────────────────────
         if not score.passes(self.min_score, self.min_probability):

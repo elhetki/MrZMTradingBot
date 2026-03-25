@@ -39,17 +39,26 @@ def alert_trade_open(
     leverage: int,
     score: int,
     probability: float,
+    mtf_consensus: str = "",
+    wobi: float = 0.0,
+    sentiment: str = "",
 ):
     """Alert when a new trade is opened."""
     emoji = "🟢" if direction == "LONG" else "🔴"
-    msg = (
-        f"{emoji} OPEN {direction} {ticker}\n"
-        f"💰 Entry: ${entry_price:,.2f}\n"
-        f"📊 Size: ${size_usd:.2f} @ {leverage}x\n"
-        f"🎯 Score: {score} | Prob: {probability:.0%}\n"
-        f"🛑 SL: -3.5% | TP: +10.5% | R/R 1:3"
-    )
-    send_alert(msg)
+    lines = [
+        f"{emoji} OPEN {direction} {ticker}",
+        f"💰 Entry: ${entry_price:,.2f}",
+        f"📊 Size: ${size_usd:.2f} @ {leverage}x",
+        f"🎯 Score: {score} | Prob: {probability:.0%}",
+    ]
+    if mtf_consensus:
+        lines.append(f"📈 MTF: {mtf_consensus}")
+    if wobi != 0.0:
+        lines.append(f"📖 WOBI: {wobi:+.3f}")
+    if sentiment:
+        lines.append(f"🌡️ Sentiment: {sentiment}")
+    lines.append("🛑 SL: -3.5% | TP: +10.5% | R/R 1:3")
+    send_alert("\n".join(lines))
 
 
 def alert_trade_close(

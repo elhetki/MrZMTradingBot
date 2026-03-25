@@ -153,6 +153,25 @@ class BacktestEngine:
                     action = self._exit.check(open_position, test_price)
 
                     if action.action in ("CLOSE_FULL", "CLOSE_PARTIAL"):
+                        # Cap at SL/TP level — in live trading, limit orders fill at the set price
+                        # not at whatever the bar's extreme was
+                        exit_pnl = open_position.current_pnl_pct(test_price)
+                        sl_pct = self._exit.sl_pct
+                        tp_pct = self._exit.tp_pct
+                        
+                        if exit_pnl <= sl_pct:
+                            # SL hit — cap at SL price, not the bar extreme
+                            if open_position.direction == "LONG":
+                                test_price = open_position.entry_price * (1 + sl_pct / 100 / open_position.leverage)
+                            else:
+                                test_price = open_position.entry_price * (1 - sl_pct / 100 / open_position.leverage)
+                        elif exit_pnl >= tp_pct:
+                            # TP hit — cap at TP price
+                            if open_position.direction == "LONG":
+                                test_price = open_position.entry_price * (1 + tp_pct / 100 / open_position.leverage)
+                            else:
+                                test_price = open_position.entry_price * (1 - tp_pct / 100 / open_position.leverage)
+                        
                         # Apply slippage to exit
                         slippage_price = self._apply_slippage(
                             test_price,

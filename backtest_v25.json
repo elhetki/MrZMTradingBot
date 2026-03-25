@@ -1,0 +1,143 @@
+[
+  {
+    "ticker": "BTC",
+    "interval": "1h",
+    "period_start": "2025-09-25 18:00:00+00:00",
+    "period_end": "2026-03-24 18:00:00+00:00",
+    "initial_capital": 10000.0,
+    "final_capital": 10000.0,
+    "stats": {
+      "total_return_pct": 0.0,
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "max_drawdown_pct": 0.0,
+      "sharpe_ratio": 0.0,
+      "profit_factor": 0.0,
+      "risk_of_ruin_pct": 0.0
+    },
+    "trades": []
+  },
+  {
+    "ticker": "ETH",
+    "interval": "1h",
+    "period_start": "2025-09-25 18:00:00+00:00",
+    "period_end": "2026-03-24 18:00:00+00:00",
+    "initial_capital": 10000.0,
+    "final_capital": 10000.0,
+    "stats": {
+      "total_return_pct": 0.0,
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "max_drawdown_pct": 0.0,
+      "sharpe_ratio": 0.0,
+      "profit_factor": 0.0,
+      "risk_of_ruin_pct": 0.0
+    },
+    "trades": []
+  },
+  {
+    "ticker": "SOL",
+    "interval": "1h",
+    "period_start": "2025-09-25 18:00:00+00:00",
+    "period_end": "2026-03-24 18:00:00+00:00",
+    "initial_capital": 10000.0,
+    "final_capital": 10000.0,
+    "stats": {
+      "total_return_pct": 0.0,
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "max_drawdown_pct": 0.0,
+      "sharpe_ratio": 0.0,
+      "profit_factor": 0.0,
+      "risk_of_ruin_pct": 0.0
+    },
+    "trades": []
+  },
+  {
+    "ticker": "DOGE",
+    "interval": "1h",
+    "period_start": "2025-09-25 18:00:00+00:00",
+    "period_end": "2026-03-24 18:00:00+00:00",
+    "initial_capital": 10000.0,
+    "final_capital": 10000.0,
+    "stats": {
+      "total_return_pct": 0.0,
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "max_drawdown_pct": 0.0,
+      "sharpe_ratio": 0.0,
+      "profit_factor": 0.0,
+      "risk_of_ruin_pct": 0.0
+    },
+    "trades": []
+  },
+  {
+    "ticker": "AVAX",
+    "interval": "1h",
+    "period_start": "2025-09-25 18:00:00+00:00",
+    "period_end": "2026-03-24 18:00:00+00:00",
+    "initial_capital": 10000.0,
+    "final_capital": 10000.0,
+    "stats": {
+      "total_return_pct": 0.0,
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "avg_win": 0.0,
+      "avg_loss": 0.0,
+      "max_drawdown_pct": 0.0,
+      "sharpe_ratio": 0.0,
+      "profit_factor": 0.0,
+      "risk_of_ruin_pct": 0.0
+    },
+    "trades": []
+  },
+  {
+    "ticker": "LINK",
+    "interval": "1h",
+    "period_start": "2025-09-25 18:00:00+00:00",
+    "period_end": "2026-03-24 18:00:00+00:00",
+    "initial_capital": 10000.0,
+    "final_capital": 9999.614534755543,
+    "stats": {
+      "total_return_pct": -0.0,
+      "total_trades": 1,
+      "win_rate": 0.0,
+      "avg_win": 0.0,
+      "avg_loss": -0.3855,
+      "max_drawdown_pct": 0.0,
+      "sharpe_ratio": 0.0,
+      "profit_factor": 0.0,
+      "risk_of_ruin_pct": 0.0
+    },
+    "trades": [
+      {
+        "id": "LINK_81d8b1b8",
+        "ticker": "LINK",
+        "direction": "LONG",
+        "entry_price": 13.785771999999998,
+        "exit_price": 13.733253,
+        "entry_time": "2026-01-18 15:00:00+00:00",
+        "exit_time": "2026-01-18 16:00:00+00:00",
+        "size_usd": 5.0,
+        "leverage": 20,
+        "fee_total": 0.0045,
+        "slippage": 0.013747000000000398,
+        "gross_pnl": -0.3809652444563745,
+        "net_pnl": -0.3854652444563744,
+        "pnl_pct": -7.61930488912749,
+        "exit_reason": "\u274c SL hit. -5.6% (limit: -3.5%)",
+        "stage": "OPEN",
+        "score": 8,
+        "duration_bars": 1
+      }
+    ]
+  }
+]

@@ -29,10 +29,13 @@ from strategy.entry import EntryLogic
 from strategy.exit_manager import ExitManager, ExitAction, Position
 from strategy.structure import BOSCHOCHDetector
 from strategy.zones import SupplyDemandZones
+from strategy.mtf import MTFFilter
+from strategy.orderbook import OrderBookIntelligence
 from exchange.dry_run import DryRunEngine
 from utils.risk_manager import RiskManager
 from utils.learning_brain import LearningBrain
 from utils.market_hours import MarketHoursChecker
+from utils.news_sentiment import NewsSentiment
 from utils.telegram_alerts import alert_trade_open, alert_trade_close, alert_daily_summary
 
 logging.basicConfig(
@@ -78,6 +81,16 @@ class MahmudBot:
         # Shared Hyperliquid client for data fetching
         from exchange.client import HyperliquidClient
         self._hl_client = HyperliquidClient(config)
+
+        # v2.5+ Intelligence layers
+        self.mtf_filter = MTFFilter(config, hl_client=self._hl_client)
+        self.orderbook = OrderBookIntelligence(config, hl_client=self._hl_client)
+        self.sentiment = NewsSentiment(config, hl_client=self._hl_client)
+
+        mtf_status = "ON" if config.get("mtf", {}).get("enabled", True) else "OFF"
+        ob_status = "ON" if config.get("orderbook", {}).get("enabled", True) else "OFF"
+        sent_status = "ON" if config.get("sentiment", {}).get("enabled", True) else "OFF"
+        logger.info(f"🧠 Intelligence layers: MTF={mtf_status} | WOBI={ob_status} | Sentiment={sent_status}")
 
         # Execution engine
         if self.dry_run:
@@ -171,9 +184,35 @@ class MahmudBot:
             self._update_zones(ticker, df)
             zones = self._zone_cache.get(ticker, [])
 
-            # Check for entry
+            # ── v2.5+ Layer 1: Multi-Timeframe Filter ────────────────
+            # Quick pre-check: determine likely direction from 200 EMA before full eval
+            from strategy.ema import EMACalculator
+            _ema_calc = EMACalculator()
+            _df_ema = _ema_calc.calculate(df.copy())
+            _ema_vals = _ema_calc.latest(_df_ema)
+            price = float(df["close"].iloc[-1])
+            likely_direction = "LONG" if _ema_vals.is_bullish(price) else "SHORT"
+
+            mtf_result = self.mtf_filter.check(ticker, likely_direction)
+            if not mtf_result.allowed:
+                logger.debug(f"MTF blocked {ticker} {likely_direction}: {mtf_result.reason}")
+                continue
+
+            # ── v2.5+ Layer 2: Order Book Intelligence ────────────────
+            wobi_score, wobi_reason = self.orderbook.get_score(ticker, likely_direction)
+
+            # ── v2.5+ Layer 3: Sentiment ──────────────────────────────
+            sentiment_score, sentiment_reason = self.sentiment.get_score(ticker, likely_direction)
+
+            # Check for entry (with WOBI + sentiment scores injected)
             try:
-                signal = self.entry_logic.evaluate(df, ticker, zones)
+                signal = self.entry_logic.evaluate(
+                    df, ticker, zones,
+                    wobi_score=wobi_score,
+                    wobi_reason=wobi_reason,
+                    sentiment_score=sentiment_score,
+                    sentiment_reason=sentiment_reason,
+                )
             except Exception as e:
                 logger.debug(f"Entry eval error for {ticker}: {e}")
                 continue
@@ -189,13 +228,20 @@ class MahmudBot:
                     signal.score.total if signal.score else 0,
                 )
 
+                # Build WOBI display
+                ob_signal = self.orderbook.analyze(ticker)
+                wobi_str = f"{ob_signal.wobi:+.3f}" if ob_signal else "N/A"
+                mtf_str = f"{mtf_result.consensus_direction or 'N/A'} ({mtf_result.agreement_count}/{len(self.mtf_filter.higher_timeframes)})"
+
                 logger.info(
                     f"\n{'='*50}\n"
                     f"🎯 SIGNAL: {signal.direction} {ticker}\n"
                     f"   Price:  {signal.entry_price:.4f}\n"
-                    f"   Score:  {signal.score.total if signal.score else 'N/A'}\n"
+                    f"   Score:  {signal.score.total if signal.score else 'N/A'} (WOBI:{signal.wobi_score} Sent:{signal.sentiment_score})\n"
                     f"   Prob:   {signal.confidence:.1%}\n"
                     f"   Volume: {signal.volume_signal.strength if signal.volume_signal else 'N/A'}\n"
+                    f"   MTF:    {mtf_str}\n"
+                    f"   WOBI:   {wobi_str}\n"
                     f"{'='*50}"
                 )
 
@@ -218,6 +264,9 @@ class MahmudBot:
                             leverage=leverage,
                             score=signal.score.total if signal.score else 0,
                             probability=signal.confidence,
+                            mtf_consensus=mtf_result.consensus_direction or "",
+                            wobi=ob_signal.wobi if ob_signal else 0.0,
+                            sentiment=self.sentiment._signal.overall_bias if self.sentiment._signal else "",
                         )
                 else:
                     # Live order placement
@@ -290,11 +339,14 @@ class MahmudBot:
         global _running
 
         logger.info("\n" + "="*60)
-        logger.info("   🤖 MahmudBot v1.0 — Z.M Trading Gym Strategy")
+        logger.info("   🤖 MahmudBot v2.5 — Z.M Trading Gym Strategy")
         logger.info(f"   Mode: {'DRY RUN' if self.dry_run else '🔴 LIVE'}")
         logger.info(f"   Markets: {len(self.markets)}")
         logger.info(f"   Interval: {self.interval}")
         logger.info(f"   Bet Size: ${self.config.get('bet_size', 10)}")
+        logger.info(f"   MTF: {', '.join(self.mtf_filter.higher_timeframes)} ({self.mtf_filter.min_agreement}/{len(self.mtf_filter.higher_timeframes)} agree)")
+        logger.info(f"   WOBI: depth={self.orderbook.depth}, threshold=±{self.orderbook.wobi_threshold}")
+        logger.info(f"   Sentiment: funding + F&G index")
         logger.info("="*60 + "\n")
 
         # Signal scan interval based on candle size
