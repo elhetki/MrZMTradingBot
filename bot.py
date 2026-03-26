@@ -236,23 +236,16 @@ class MahmudBot:
                 leverage = market_cfg.get("leverage", 10)
                 size_mult = self._day_sizing_multiplier()
 
-                # Learning brain adjustments
-                brain_adj = self.learning_brain.get_adjustments(
-                    ticker,
-                    signal.direction,
-                    signal.score.total if signal.score else 0,
-                )
-
                 # Build WOBI display
                 ob_signal = self.orderbook.analyze(ticker)
-                wobi_str = f"{ob_signal.wobi:+.3f}" if ob_signal else "N/A"
+                wobi_str = f"{ob_signal.smoothed_wobi:+.3f}" if ob_signal else "N/A"
                 mtf_str = f"{mtf_result.consensus_direction or 'N/A'} ({mtf_result.agreement_count}/{len(self.mtf_filter.higher_timeframes)})"
 
                 logger.info(
                     f"\n{'='*50}\n"
                     f"🎯 SIGNAL: {signal.direction} {ticker}\n"
                     f"   Price:  {signal.entry_price:.4f}\n"
-                    f"   Score:  {signal.score.total if signal.score else 'N/A'} (WOBI:{signal.wobi_score} Sent:{signal.sentiment_score})\n"
+                    f"   Score:  {signal.score} (WOBI:{signal.wobi_score} Sent:{signal.sentiment_score})\n"
                     f"   Prob:   {signal.confidence:.1%}\n"
                     f"   Volume: {signal.volume_signal.strength if signal.volume_signal else 'N/A'}\n"
                     f"   MTF:    {mtf_str}\n"
@@ -267,7 +260,7 @@ class MahmudBot:
                         entry_price=signal.entry_price,
                         leverage=leverage,
                         size_multiplier=size_mult,
-                        score=signal.score.total if signal.score else 0,
+                        score=signal.score,
                         probability=signal.confidence,
                     )
                     if pos:
@@ -277,7 +270,7 @@ class MahmudBot:
                             entry_price=signal.entry_price,
                             size_usd=self.config.get("bet_size", 10) * size_mult,
                             leverage=leverage,
-                            score=signal.score.total if signal.score else 0,
+                            score=signal.score,
                             probability=signal.confidence,
                             mtf_consensus=mtf_result.consensus_direction or "",
                             wobi=ob_signal.wobi if ob_signal else 0.0,
