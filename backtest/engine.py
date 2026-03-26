@@ -22,9 +22,9 @@ from strategy.ema import EMACalculator
 from strategy.structure import BOSCHOCHDetector
 from strategy.zones import SupplyDemandZones
 from strategy.volume import VolumeConfirmation
-from strategy.scoring import ScoringEngine
 from strategy.entry import EntryLogic
 from strategy.exit_manager import ExitManager, Position, ExitStage
+from strategy.chop_filter import ChopFilter
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +95,12 @@ class BacktestEngine:
         self._ema = EMACalculator()
         self._entry = EntryLogic(config)
         self._exit = ExitManager(config)
+        self._chop = ChopFilter(config)
+
+        # Cooldown: minimum bars between trades (prevents overtrading)
+        self.cooldown_bars = config.get("cooldown_seconds", 300) // 300  # Convert seconds to 5m bars
+        if self.cooldown_bars < 1:
+            self.cooldown_bars = 1
 
         # Warm-up period: need at least 200 candles for EMA200
         self.warmup_bars = 250
@@ -215,6 +221,7 @@ class BacktestEngine:
 
                         if action.action == "CLOSE_FULL":
                             open_position = None
+                            self._last_close_bar = i  # Cooldown tracking
                         else:
                             # Partial close — update remaining fraction
                             self._exit.apply_action(action, open_position, test_price)
@@ -226,6 +233,15 @@ class BacktestEngine:
 
             # ── Look for new entry (only if no open position) ─────────────
             if open_position is None:
+                # Cooldown check
+                if hasattr(self, '_last_close_bar') and (i - self._last_close_bar) < self.cooldown_bars:
+                    continue
+
+                # Chop filter
+                chop_result = self._chop.check(window)
+                if chop_result.is_choppy:
+                    continue
+
                 # Periodically rebuild zones
                 if i % zone_update_interval == 0:
                     try:
@@ -268,7 +284,7 @@ class BacktestEngine:
 
                     self._entry_bar = i
                     self._entry_time = current_ts
-                    self._last_score = entry_signal.score.total if entry_signal.score else 0
+                    self._last_score = entry_signal.score if entry_signal.score else 0
 
                     logger.debug(
                         f"Entry: {entry_signal.direction} {ticker} @ {entry_price:.4f} | "
