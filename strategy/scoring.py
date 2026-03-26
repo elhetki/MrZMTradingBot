@@ -267,12 +267,12 @@ class ScoringEngine:
         # This ensures min_score=6 at min_prob=0.70 is achievable
         max_possible = 16
         clamped = max(0, min(result.total, max_possible))
-        if clamped <= 6:
-            # Linear ramp: 0→50%, 6→70%
-            raw_prob = 0.50 + (clamped / 6) * 0.20
+        if clamped <= 5:
+            # Linear ramp: 0→50%, 5→70%
+            raw_prob = 0.50 + (clamped / 5) * 0.20
         else:
-            # Linear ramp: 6→70%, 16→75%
-            raw_prob = 0.70 + ((clamped - 6) / (max_possible - 6)) * 0.05
+            # Linear ramp: 5→70%, 16→75%
+            raw_prob = 0.70 + ((clamped - 5) / (max_possible - 5)) * 0.05
         result.probability = min(raw_prob, 0.75)  # HARD CAP at 75%
 
         return result

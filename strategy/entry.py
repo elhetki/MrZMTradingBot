@@ -241,10 +241,10 @@ class EntryLogic:
         # Recalculate probability with updated total — capped at 75%
         max_possible = 16
         clamped = max(0, min(score.total, max_possible))
-        if clamped <= 6:
-            raw_prob = 0.50 + (clamped / 6) * 0.20
+        if clamped <= 5:
+            raw_prob = 0.50 + (clamped / 5) * 0.20
         else:
-            raw_prob = 0.70 + ((clamped - 6) / (max_possible - 6)) * 0.05
+            raw_prob = 0.70 + ((clamped - 5) / (max_possible - 5)) * 0.05
         score.probability = min(raw_prob, 0.75)  # HARD CAP at 75%
 
         # ── Minimum Score + Probability Filter ───────────────────────────

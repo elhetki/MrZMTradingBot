@@ -209,8 +209,12 @@ class MahmudBot:
                 self._mtf_blocked += 1
                 continue
 
-            # ── v2.5+ Layer 2: Order Book Intelligence ────────────────
-            wobi_score, wobi_reason = self.orderbook.get_score(ticker, likely_direction)
+            # ── v2.5+ Layer 2: Order Book Intelligence (VETO POWER) ──
+            wobi_score, wobi_reason, wobi_vetoed = self.orderbook.get_score(ticker, likely_direction)
+            if wobi_vetoed:
+                logger.info(f"📖 WOBI VETO {ticker} {likely_direction}: {wobi_reason}")
+                self._wobi_vetoed += 1
+                continue
 
             # ── v2.5+ Layer 3: Sentiment ──────────────────────────────
             sentiment_score, sentiment_reason = self.sentiment.get_score(ticker, likely_direction)
@@ -389,6 +393,7 @@ class MahmudBot:
         # Reset counters
         self._chop_blocked = 0
         self._mtf_blocked = 0
+        self._wobi_vetoed = 0
 
     def run(self):
         """Main bot loop."""
@@ -421,6 +426,7 @@ class MahmudBot:
         last_report = 0
         self._chop_blocked = 0
         self._mtf_blocked = 0
+        self._wobi_vetoed = 0
 
         while _running:
             now = time.time()
