@@ -33,11 +33,12 @@ class VolumeConfirmation:
     Uses a rolling average as baseline for 'up' vs 'down' volume.
     """
 
-    def __init__(self, ma_period: int = 20, above_avg_threshold: float = 1.0):
+    def __init__(self, ma_period: int = 20, above_avg_threshold: float = 0.7):
         """
         Args:
             ma_period: Period for volume moving average.
             above_avg_threshold: Volume must be > this multiple of MA to be 'strong'.
+                                 0.7 = 70% of average (accounts for off-peak hours in crypto).
         """
         self.ma_period = ma_period
         self.above_avg_threshold = above_avg_threshold
