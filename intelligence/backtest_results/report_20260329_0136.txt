@@ -1,0 +1,21 @@
+📊 PEGASUS BACKTEST REPORT — 2026-03-29 01:37 UTC
+
+📈 5m (18 days):
+  Trades: 175 | WR: 10.3% | P&L: $-679.80
+  Exits: TP:18 SL:157 Fund:0 Other:0
+    🔴 SPX: 29t 10%WR $-95.27
+    🔴 AVAX: 38t 16%WR $-99.41
+    🔴 SUI: 35t 11%WR $-106.11
+    🔴 XRP: 20t 0%WR $-117.65
+    🔴 BTC: 23t 4%WR $-126.42
+    🔴 ETH: 30t 13%WR $-134.94
+
+📈 1h (3 months):
+  Trades: 1671 | WR: 44.8% | P&L: $-411.57
+  Exits: TP:748 SL:923 Fund:0 Other:0
+    🟢 SPX: 346t 54%WR $+560.61
+    🔴 AVAX: 215t 35%WR $-95.16
+    🔴 ETH: 336t 51%WR $-102.60
+    🔴 SUI: 226t 35%WR $-112.72
+    🔴 XRP: 340t 48%WR $-232.43
+    🔴 BTC: 208t 35%WR $-429.28
