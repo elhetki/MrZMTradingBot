@@ -56,6 +56,9 @@ class EntrySignal:
     wobi_score: int = 0
     sentiment_score: int = 0
 
+    entry_pattern: str = ""      # Best pattern at entry (for learning engine)
+    entry_rsi: float = 50.0      # RSI at entry (for learning engine)
+
     checks_passed: dict = field(default_factory=dict)
     checks_failed: list[str] = field(default_factory=list)
     skip_reason: Optional[str] = None
@@ -198,6 +201,7 @@ class EntryLogic:
         pattern_score, pattern_desc = self._patterns.best_pattern(df, direction)
         breakdown["chart_pattern"] = pattern_score
         total_score += pattern_score
+        signal.entry_pattern = pattern_desc if pattern_score > 0 else ""
         if pattern_score > 0:
             signal.checks_passed["chart_pattern"] = pattern_desc
 
@@ -234,6 +238,7 @@ class EntryLogic:
 
         # --- RSI extreme (+2) ---
         rsi = self._calc_rsi(df)
+        signal.entry_rsi = rsi
         rsi_pts = 0
         if direction == "LONG" and rsi < self._rsi_oversold:
             rsi_pts = 2

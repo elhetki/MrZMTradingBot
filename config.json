@@ -1,344 +1,266 @@
 {
-  "_comment": "MahmudBot v1.0 \u2014 Z.M Trading Gym Strategy \u2014 Hyperliquid Perpetuals",
-  "dry_run": true,
-  "testnet": false,
-  "wallet_address": "0xC19795B8Ec4fdcf9452CB7536f3365183927c1D7",
-  "api_wallet_address": "0xDa239a7261e9C9f9B69c647eAFaa915aa555b5dd",
-  "private_key": "ENV:HL_API_PRIVATE_KEY",
-  "bet_size": 10.0,
-  "max_positions": 3,
-  "daily_loss_cap": 50.0,
-  "consecutive_loss_limit": 3,
-  "cooldown_seconds": 300,
-  "scoring": {
-    "min_score": 5,
-    "min_probability": 0.7
-  },
-  "exit": {
-    "sl_pct": -20.0,
-    "tp_pct": 60.0,
-    "hard_stop_pct": -30.0,
-    "use_simple_exits": true,
-    "funding_guard": true,
-    "funding_guard_minutes": 5,
-    "_v25_note": "v2.5: Clean SL/TP + hard stop safety net + funding guard. No interest ever."
-  },
-  "day_sizing": {
-    "0": 0.7,
-    "1": 1.0,
-    "2": 1.0,
-    "3": 1.0,
-    "4": 0.7,
-    "5": 0.5,
-    "6": 0.5
-  },
-  "ema_periods": [
-    8,
-    13,
-    48,
-    200
-  ],
-  "rsi_period": 14,
-  "rsi_oversold": 35,
-  "rsi_overbought": 65,
-  "bb_period": 20,
-  "bb_std": 2.0,
-  "markets": {
-    "BTC": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 40,
-      "slippage_limit": 0.0005
+    "_comment": "MahmudBot v1.0 \u2014 Z.M Trading Gym Strategy \u2014 Hyperliquid Perpetuals",
+    "dry_run": true,
+    "testnet": false,
+    "wallet_address": "0xC19795B8Ec4fdcf9452CB7536f3365183927c1D7",
+    "api_wallet_address": "0xDa239a7261e9C9f9B69c647eAFaa915aa555b5dd",
+    "private_key": "ENV:HL_API_PRIVATE_KEY",
+    "bet_size": 100.0,
+    "max_positions": 3,
+    "daily_loss_cap": 500.0,
+    "consecutive_loss_limit": 3,
+    "cooldown_seconds": 600,
+    "scoring": {
+        "min_score": 5,
+        "min_probability": 0.5
     },
-    "ETH": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 40,
-      "slippage_limit": 0.0005
+    "exit": {
+        "sl_pct": -3.5,
+        "tp_pct": 10.5,
+        "hard_stop_pct": -5.25,
+        "use_simple_exits": true,
+        "funding_guard": true,
+        "funding_guard_minutes": 2,
+        "_v25_note": "v2.5: Clean SL/TP + hard stop safety net + funding guard. No interest ever."
     },
-    "SOL": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 40,
-      "slippage_limit": 0.0015
+    "day_sizing": {
+        "0": 0.7,
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 0.7,
+        "5": 0.35,
+        "6": 0.5
     },
-    "BNB": {
-      "enabled": false,
-      "asset_class": "crypto",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "WTI": {
-      "enabled": false,
-      "asset_class": "commodity",
-      "leverage": 20,
-      "slippage_limit": 0.003,
-      "_note": "Not available on Hyperliquid"
-    },
-    "BRENT": {
-      "enabled": false,
-      "asset_class": "commodity",
-      "leverage": 20,
-      "slippage_limit": 0.003,
-      "_note": "Not available on Hyperliquid"
-    },
-    "XAU": {
-      "enabled": false,
-      "asset_class": "commodity",
-      "leverage": 20,
-      "slippage_limit": 0.003,
-      "_note": "Not available on Hyperliquid"
-    },
-    "DOGE": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "AVAX": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "LINK": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "XAG": {
-      "enabled": false,
-      "asset_class": "commodity",
-      "leverage": 20,
-      "slippage_limit": 0.003
-    },
-    "PAXG": {
-      "enabled": true,
-      "asset_class": "commodity",
-      "leverage": 10,
-      "slippage_limit": 0.003,
-      "_note": "Tokenized Gold on Hyperliquid"
-    },
-    "GAS": {
-      "enabled": true,
-      "asset_class": "commodity",
-      "leverage": 3,
-      "slippage_limit": 0.005
-    },
-    "HYPE": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "SUI": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "SPX": {
-      "enabled": false,
-      "asset_class": "index",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "NVDA": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "TSLA": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "AAPL": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "MSFT": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "META": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "AMZN": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "GOOGL": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "AMD": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "NFLX": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "PLTR": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "ORCL": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "MSTR": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "COIN": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "HOOD": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "HIMS": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "BABA": {
-      "enabled": false,
-      "asset_class": "stock",
-      "leverage": 20,
-      "slippage_limit": 0.002
-    },
-    "XRP": {
-      "enabled": true,
-      "asset_class": "crypto",
-      "leverage": 40,
-      "slippage_limit": 0.001
-    },
-    "@265": {
-      "enabled": true,
-      "asset_class": "commodity",
-      "leverage": 20,
-      "slippage_limit": 0.005,
-      "_note": "Brent Oil on Hyperliquid HIP-3 (xyz dex). Lower leverage due to thinner liquidity."
-    }
-  },
-  "market_hours": {
-    "crypto": {
-      "always_open": true
-    },
-    "commodity": {
-      "always_open": false,
-      "open_utc": "22:00",
-      "close_utc": "21:00",
-      "open_day": "Sunday",
-      "close_day": "Friday"
-    },
-    "index": {
-      "always_open": false,
-      "open_utc": "08:00",
-      "close_utc": "21:00",
-      "days": [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday"
-      ]
-    },
-    "stock": {
-      "always_open": false,
-      "open_utc": "08:00",
-      "close_utc": "21:00",
-      "days": [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday"
-      ]
-    }
-  },
-  "backtest": {
-    "lookback_months": 6,
-    "candle_interval": "5m",
-    "fee_rate": 0.00045,
-    "slippage_estimate": 0.001,
-    "initial_capital": 10000.0
-  },
-  "chop_filter": {
-    "enabled": true,
-    "lookback": 20,
-    "min_triggers": 2,
-    "range_threshold": 3.0,
-    "squeeze_threshold": 0.1,
-    "bb_width_threshold": 1.5,
-    "bb_period": 20,
-    "bb_std": 2.0
-  },
-  "mtf": {
-    "enabled": true,
-    "higher_timeframes": [
-      "15m",
-      "30m",
-      "1h"
+    "ema_periods": [
+        8,
+        13,
+        48,
+        200
     ],
-    "min_agreement": 2,
-    "ema_period": 200
-  },
-  "orderbook": {
-    "enabled": true,
-    "depth": 20,
-    "wobi_threshold": 0.3,
-    "wall_multiplier": 3.0,
-    "refresh_seconds": 2,
-    "score_points": 2,
-    "veto_threshold": 0.5,
-    "conflict_threshold": 0.2,
-    "decay_factor": 0.15,
-    "ema_alpha": 0.3
-  },
-  "sentiment": {
-    "enabled": true,
-    "funding_rate_extreme": 0.0001,
-    "fear_greed_enabled": true,
-    "fear_greed_url": "https://api.alternative.me/fng/",
-    "refresh_seconds": 3600
-  },
-  "learnings_file": "learnings.json",
-  "log_dir": "logs",
-  "dashboard_port": 8888,
-  "exit_check_interval": 2,
-  "signal_candle_interval": "5m"
+    "rsi_period": 14,
+    "rsi_oversold": 35,
+    "rsi_overbought": 65,
+    "bb_period": 20,
+    "bb_std": 2.0,
+    "markets": {
+        "BTC": {
+            "enabled": true,
+            "asset_class": "crypto",
+            "leverage": 40,
+            "slippage_limit": 0.0005
+        },
+        "ETH": {
+            "enabled": true,
+            "asset_class": "crypto",
+            "leverage": 40,
+            "slippage_limit": 0.0005
+        },
+        "SOL": {
+            "enabled": false,
+            "asset_class": "crypto",
+            "leverage": 40,
+            "slippage_limit": 0.0015
+        },
+        "WTI": {
+            "enabled": true,
+            "asset_class": "commodity",
+            "leverage": 20,
+            "slippage_limit": 0.003,
+            "_note": "Not available on Hyperliquid"
+        },
+        "BRENT": {
+            "enabled": true,
+            "asset_class": "commodity",
+            "leverage": 20,
+            "slippage_limit": 0.003,
+            "_note": "Not available on Hyperliquid"
+        },
+        "XAU": {
+            "enabled": true,
+            "asset_class": "commodity",
+            "leverage": 20,
+            "slippage_limit": 0.003,
+            "_note": "Not available on Hyperliquid"
+        },
+        "AVAX": {
+            "enabled": true,
+            "asset_class": "crypto",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "XAG": {
+            "enabled": true,
+            "asset_class": "commodity",
+            "leverage": 20,
+            "slippage_limit": 0.003
+        },
+        "SUI": {
+            "enabled": true,
+            "asset_class": "crypto",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "SPX": {
+            "enabled": true,
+            "asset_class": "index",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "NVDA": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "TSLA": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "AAPL": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "MSFT": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "META": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "AMZN": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "GOOGL": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "NFLX": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "PLTR": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "MSTR": {
+            "enabled": true,
+            "asset_class": "stock",
+            "leverage": 20,
+            "slippage_limit": 0.002
+        },
+        "XRP": {
+            "enabled": true,
+            "asset_class": "crypto",
+            "leverage": 40,
+            "slippage_limit": 0.001
+        }
+    },
+    "market_hours": {
+        "crypto": {
+            "always_open": true
+        },
+        "commodity": {
+            "always_open": false,
+            "open_utc": "22:00",
+            "close_utc": "21:00",
+            "open_day": "Sunday",
+            "close_day": "Friday"
+        },
+        "index": {
+            "always_open": false,
+            "open_utc": "08:00",
+            "close_utc": "21:00",
+            "days": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday"
+            ]
+        },
+        "stock": {
+            "always_open": false,
+            "open_utc": "08:00",
+            "close_utc": "21:00",
+            "days": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday"
+            ]
+        }
+    },
+    "backtest": {
+        "lookback_months": 6,
+        "candle_interval": "5m",
+        "fee_rate": 0.00045,
+        "slippage_estimate": 0.001,
+        "initial_capital": 10000.0
+    },
+    "chop_filter": {
+        "enabled": true,
+        "lookback": 20,
+        "min_triggers": 2,
+        "range_threshold": 3.0,
+        "squeeze_threshold": 0.1,
+        "bb_width_threshold": 1.5,
+        "bb_period": 20,
+        "bb_std": 2.0
+    },
+    "mtf": {
+        "enabled": true,
+        "higher_timeframes": [
+            "15m",
+            "30m",
+            "1h"
+        ],
+        "min_agreement": 2,
+        "ema_period": 200
+    },
+    "orderbook": {
+        "enabled": true,
+        "depth": 20,
+        "wobi_threshold": 0.3,
+        "wall_multiplier": 3.0,
+        "refresh_seconds": 2,
+        "score_points": 2,
+        "veto_threshold": 0.5,
+        "conflict_threshold": 0.2,
+        "decay_factor": 0.15,
+        "ema_alpha": 0.3
+    },
+    "sentiment": {
+        "enabled": true,
+        "funding_rate_extreme": 0.0001,
+        "fear_greed_enabled": true,
+        "fear_greed_url": "https://api.alternative.me/fng/",
+        "refresh_seconds": 3600
+    },
+    "learnings_file": "learnings.json",
+    "log_dir": "logs",
+    "dashboard_port": 8888,
+    "exit_check_interval": 2,
+    "signal_candle_interval": "5m",
+    "hourly_loss_cap": 300.0,
+    "max_same_direction": 2
 }

@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-03-28",
+    "timestamp": "2026-03-28T20:33:44.971998+00:00",
+    "changes": [
+      "\ud83d\udd27 markets.SOL.enabled: True \u2192 False (SOL: 13t, 15% WR, $-4.39. Disabling until conditions improve.)",
+      "\ud83d\udd27 day_sizing.5: 0.5 \u2192 0.35 (Weekend WR 19% across 21 trades. Reducing weekend position size.)"
+    ]
+  }
+]

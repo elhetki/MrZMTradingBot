@@ -1,0 +1,32 @@
+[
+  {
+    "date": "2026-03-28",
+    "timestamp": "2026-03-28T20:33:44.971388+00:00",
+    "analysis": {
+      "total_trades": 21,
+      "total_pnl": -6.8500000000000005,
+      "win_rate": 19.047619047619047,
+      "rr_ratio": 0.2783083219645293,
+      "best_market": {
+        "ticker": "BTC",
+        "pnl": -0.53
+      },
+      "worst_market": {
+        "ticker": "SOL",
+        "pnl": -4.390000000000001
+      },
+      "max_loss_streak": 13
+    },
+    "config_changes": [
+      "\ud83d\udd27 markets.SOL.enabled: True \u2192 False (SOL: 13t, 15% WR, $-4.39. Disabling until conditions improve.)",
+      "\ud83d\udd27 day_sizing.5: 0.5 \u2192 0.35 (Weekend WR 19% across 21 trades. Reducing weekend position size.)"
+    ],
+    "research_agenda": [
+      "entry_filters",
+      "exit_optimization",
+      "community_intel",
+      "platform_updates"
+    ],
+    "recommendations_count": 2
+  }
+]

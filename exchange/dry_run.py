@@ -114,6 +114,9 @@ class DryRunEngine:
             entry_price=entry_price,
             size_usd=size_usd,
             leverage=leverage,
+            entry_pattern=pattern,
+            entry_score=score,
+            entry_rsi=0.0,
         )
 
         self.open_positions[pos_id] = pos

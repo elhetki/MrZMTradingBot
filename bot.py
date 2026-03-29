@@ -37,6 +37,8 @@ from utils.risk_manager import RiskManager
 from utils.learning_brain import LearningBrain
 from utils.market_hours import MarketHoursChecker
 from utils.news_sentiment import NewsSentiment
+from utils.google_news import GoogleNewsSentiment
+from strategy.volatility_regime import VolatilityRegimeDetector
 from utils.telegram_alerts import alert_trade_open, alert_trade_close, alert_daily_summary
 
 logging.basicConfig(
@@ -88,12 +90,15 @@ class MahmudBot:
         self.mtf_filter = MTFFilter(config, hl_client=self._hl_client)
         self.orderbook = OrderBookIntelligence(config, hl_client=self._hl_client)
         self.sentiment = NewsSentiment(config, hl_client=self._hl_client)
+        self.google_news = GoogleNewsSentiment(config.get("google_news", {"enabled": True}))
+        self.regime_detector = VolatilityRegimeDetector(config.get("volatility_regime", {"enabled": True}))
 
         chop_status = "ON" if config.get("chop_filter", {}).get("enabled", True) else "OFF"
         mtf_status = "ON" if config.get("mtf", {}).get("enabled", True) else "OFF"
         ob_status = "ON" if config.get("orderbook", {}).get("enabled", True) else "OFF"
         sent_status = "ON" if config.get("sentiment", {}).get("enabled", True) else "OFF"
-        logger.info(f"🧠 Intelligence layers: Chop={chop_status} | MTF={mtf_status} | WOBI={ob_status} | Sentiment={sent_status}")
+        news_status = "ON" if config.get("google_news", {}).get("enabled", True) else "OFF"
+        logger.info(f"🧠 Intelligence layers: Chop={chop_status} | MTF={mtf_status} | WOBI={ob_status} | Sentiment={sent_status} | News={news_status}")
 
         # Execution engine
         if self.dry_run:
@@ -157,6 +162,25 @@ class MahmudBot:
 
     def scan_markets(self):
         """Scan all enabled markets for entry signals."""
+        from datetime import datetime, timezone
+
+        now_utc = datetime.now(timezone.utc)
+        hour = now_utc.hour
+
+        # London Close blackout: 15:00-16:00 UTC
+        # Zoran data: 9% WR, -$1,526 in this hour alone
+        if hour == 15:
+            logger.debug("[BLACKOUT] London Close hour (15:00-16:00 UTC) — skipping all signals")
+            return
+
+        # US Open chaos: 13:30-14:30 UTC (Z.M rule)
+        if hour == 13 and now_utc.minute >= 30:
+            logger.debug("[BLACKOUT] US Open first 30min (13:30-14:00 UTC) — skipping")
+            return
+        if hour == 14 and now_utc.minute < 30:
+            logger.debug("[BLACKOUT] US Open (14:00-14:30 UTC) — skipping")
+            return
+
         for ticker, market_cfg in self.markets.items():
             asset_class = market_cfg.get("asset_class", "crypto")
 
@@ -182,6 +206,14 @@ class MahmudBot:
                 continue
 
             self._candle_cache[ticker] = df
+
+            # ── v2.6 Layer: Volatility Regime Detection ──
+            regime = self.regime_detector.detect(ticker, df)
+            regime_size_mult = regime.size_multiplier
+
+            # In STORM mode, raise minimum score
+            if regime.min_score_override and regime.regime.value == "STORM":
+                logger.info(f"🌪️ STORM regime on {ticker} — min score raised to {regime.min_score_override}, size at {regime.size_multiplier:.0%}")
 
             # Update zones
             self._update_zones(ticker, df)
@@ -209,6 +241,12 @@ class MahmudBot:
                 self._mtf_blocked += 1
                 continue
 
+            # ── v2.6 Layer: Google News Sentiment (BLOCK POWER) ──
+            news_blocked, news_reason = self.google_news.should_block(ticker, likely_direction)
+            if news_blocked:
+                logger.info(f"📰 NEWS blocked {ticker} {likely_direction}: {news_reason}")
+                continue
+
             # ── v2.5+ Layer 2: Order Book Intelligence (VETO POWER) ──
             wobi_score, wobi_reason, wobi_vetoed = self.orderbook.get_score(ticker, likely_direction)
             if wobi_vetoed:
@@ -233,8 +271,16 @@ class MahmudBot:
                 continue
 
             if signal.valid:
+                # Check storm override on min score
+                effective_min_score = self.config.get("scoring", {}).get("min_score", 6)
+                if regime.min_score_override and regime.regime.value == "STORM":
+                    effective_min_score = regime.min_score_override
+                if signal.score < effective_min_score:
+                    logger.debug(f"Score {signal.score} below min {effective_min_score} for {ticker} (regime: {regime.regime.value})")
+                    continue
+
                 leverage = market_cfg.get("leverage", 10)
-                size_mult = self._day_sizing_multiplier()
+                size_mult = self._day_sizing_multiplier() * regime_size_mult
 
                 # Build WOBI display
                 ob_signal = self.orderbook.analyze(ticker)
@@ -262,6 +308,7 @@ class MahmudBot:
                         size_multiplier=size_mult,
                         score=signal.score,
                         probability=signal.confidence,
+                        pattern=signal.entry_pattern,
                     )
                     if pos:
                         alert_trade_open(
@@ -314,6 +361,9 @@ class MahmudBot:
                         pnl_usd=record.pnl_usd,
                         pnl_pct=record.pnl_pct,
                         sl_hit=(record.pnl_usd < 0),
+                        pattern=getattr(pos, 'entry_pattern', ''),
+                        score=getattr(pos, 'entry_score', 0),
+                        rsi_at_entry=getattr(pos, 'entry_rsi', 50.0),
                     )
                     logger.info(f"📕 Closed: {record.ticker} {record.direction} | P&L: {record.pnl_pct:+.1f}% (${record.pnl_usd:+.2f})")
                     alert_trade_close(

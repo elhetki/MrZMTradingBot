@@ -39,6 +39,11 @@ class Position:
     remaining_fraction: float = 1.0
     partial_done: bool = False
 
+    # Entry signal info (for learning engine)
+    entry_pattern: str = ""
+    entry_score: int = 0
+    entry_rsi: float = 50.0
+
     # Tracking
     peak_pnl_pct: float = 0.0
     closed: bool = False

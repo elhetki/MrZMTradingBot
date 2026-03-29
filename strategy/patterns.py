@@ -70,7 +70,7 @@ class PatternDetector:
             self._double_bottom, self._double_top,
             self._head_shoulders, self._inv_head_shoulders,
             self._ascending_triangle, self._descending_triangle,
-            self._rising_wedge, self._falling_wedge,
+            # self._rising_wedge, self._falling_wedge,  # Disabled: 0% WR (Zoran data)
             self._cup_and_handle,
             self._pin_bar_bull, self._pin_bar_bear,
             self._doji_at_level,

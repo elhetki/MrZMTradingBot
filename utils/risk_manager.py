@@ -28,14 +28,20 @@ class RiskManager:
         self.max_positions = config.get("max_positions", 3)
         self.daily_loss_cap = config.get("daily_loss_cap", 50.0)
         self.consecutive_loss_limit = config.get("consecutive_loss_limit", 3)
-        self.cooldown_seconds = config.get("cooldown_seconds", 300)
+        self.cooldown_seconds = config.get("cooldown_seconds", 600)
+        self.hourly_loss_cap = config.get("hourly_loss_cap", 300.0)
+        self.daily_profit_lock_pct = config.get("daily_profit_lock_pct", 10.0)
 
         self._last_day: Optional[str] = None
         self._daily_loss: float = 0.0
+        self._daily_profit: float = 0.0
+        self._hourly_loss: float = 0.0
+        self._current_hour: int = -1
         self._consecutive_losses: int = 0
         self._paused: bool = False
         self._paused_reason: str = ""
         self._first_trade_of_day: bool = True
+        self._profit_locked: bool = False
         self._last_trade_per_market: dict[str, float] = {}  # ticker → timestamp
 
         # Correlation guard: track same-direction crypto positions
@@ -51,8 +57,32 @@ class RiskManager:
         if today != self._last_day:
             logger.info(f"New trading day: {today} | Resetting risk counters")
             self._daily_loss = 0.0
+            self._daily_profit = 0.0
             self._consecutive_losses = 0
             self._first_trade_of_day = True
+            self._profit_locked = False
+            self._last_day = today
+            # Reset pause if paused for daily loss (consecutive loss pause remains)
+            if self._paused and "daily loss" in self._paused_reason.lower():
+                self._paused = False
+                self._paused_reason = ""
+            if self._paused and "profit lock" in self._paused_reason.lower():
+                self._paused = False
+                self._paused_reason = ""
+            if self._paused and "hourly" in self._paused_reason.lower():
+                self._paused = False
+                self._paused_reason = ""
+
+        # Reset hourly loss counter
+        current_hour = datetime.now(timezone.utc).hour
+        if current_hour != self._current_hour:
+            self._current_hour = current_hour
+            self._hourly_loss = 0.0
+            # Unpause if paused for hourly cap
+            if self._paused and "hourly" in self._paused_reason.lower():
+                self._paused = False
+                self._paused_reason = ""
+                logger.info("⏰ New hour — hourly loss cap reset, resuming trading")
             self._last_day = today
             # Reset pause if paused for daily loss (consecutive loss pause remains)
             if self._paused and "daily loss" in self._paused_reason.lower():
@@ -88,6 +118,16 @@ class RiskManager:
             self._paused_reason = f"Daily loss cap hit (${self._daily_loss:.2f} ≥ ${self.daily_loss_cap})"
             return False, self._paused_reason
 
+        # Hourly loss cap ($300 default)
+        if self._hourly_loss >= self.hourly_loss_cap:
+            self._paused = True
+            self._paused_reason = f"Hourly loss cap hit (${self._hourly_loss:.2f} ≥ ${self.hourly_loss_cap}) — pausing until next hour"
+            return False, self._paused_reason
+
+        # Daily profit lock (10% default)
+        if self._profit_locked:
+            return False, f"Daily profit locked — gains protected (${self._daily_profit:.2f})"
+
         # Consecutive loss pause
         if self._consecutive_losses >= self.consecutive_loss_limit:
             self._paused = True
@@ -108,6 +148,13 @@ class RiskManager:
                 return False, "Correlation guard: already have a crypto LONG position"
             if direction == "SHORT" and self._open_crypto_shorts >= 1:
                 return False, "Correlation guard: already have a crypto SHORT position"
+
+        # Direction cap: max 2 positions in same direction (all asset classes)
+        # Zoran lesson: 12 same-direction positions = -$3,131 loss streak
+        if direction:
+            same_dir_count = sum(1 for p in open_positions if p.direction == direction)
+            if same_dir_count >= 2:
+                return False, f"Direction cap: already {same_dir_count} {direction} positions (max 2)"
 
         return True, "OK"
 
@@ -148,17 +195,29 @@ class RiskManager:
         asset_class: str,
         pnl_usd: float,
     ):
-        """Call this when a position is closed. Updates loss tracking."""
+        """Call this when a position is closed. Updates loss/profit tracking."""
         if pnl_usd < 0:
             self._daily_loss += abs(pnl_usd)
+            self._hourly_loss += abs(pnl_usd)
             self._consecutive_losses += 1
             logger.info(
                 f"Loss recorded: ${pnl_usd:.2f} | "
                 f"Daily: ${self._daily_loss:.2f} | "
+                f"Hourly: ${self._hourly_loss:.2f} | "
                 f"Consecutive: {self._consecutive_losses}"
             )
         else:
             self._consecutive_losses = 0
+            self._daily_profit += pnl_usd
+
+            # Check daily profit lock
+            starting_equity = self.config.get("starting_equity", 10000.0)
+            profit_pct = (self._daily_profit / starting_equity) * 100
+            if profit_pct >= self.daily_profit_lock_pct and not self._profit_locked:
+                self._profit_locked = True
+                self._paused = True
+                self._paused_reason = f"🔒 Daily profit lock: +{profit_pct:.1f}% (${self._daily_profit:.2f}) — gains protected"
+                logger.info(self._paused_reason)
 
         if asset_class == "crypto":
             if direction == "LONG":
