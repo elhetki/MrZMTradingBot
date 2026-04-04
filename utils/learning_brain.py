@@ -32,6 +32,10 @@ LOSS_AVOID_THRESHOLD = 0.70   # Avoid if >70% loss rate
 WIN_PREFER_THRESHOLD = 0.65   # Prefer if >65% win rate
 MAX_DIRECTION_BIAS = 10  # Max ±10 probability points
 
+# v3.0: Hard veto thresholds (Zoran: ticker+pattern WR<25% on 10+ trades = blocked)
+HARD_VETO_MIN_TRADES = 10    # Minimum trades for hard veto
+HARD_VETO_MAX_WR = 0.25      # WR below this = hard veto (not just soft penalty)
+
 
 @dataclass
 class PatternStats:
@@ -278,7 +282,7 @@ class LearningBrain:
         return brain.sl_adjust_pct
 
     def should_avoid_pattern(self, ticker: str, pattern: str) -> bool:
-        """Returns True if the brain has learned to avoid this pattern."""
+        """Returns True if the brain has learned to avoid this pattern (soft)."""
         if not pattern:
             return False
         brain = self._get_brain(ticker)
@@ -290,6 +294,28 @@ class LearningBrain:
         if total < MIN_SAMPLE:
             return False
         return (losses / total) > LOSS_AVOID_THRESHOLD
+
+    def is_hard_vetoed(self, ticker: str, pattern: str) -> bool:
+        """
+        v3.0: Hard veto — ticker+pattern combo with ≥10 trades and WR<25%.
+        Unlike should_avoid_pattern (soft penalty), this is an absolute block.
+        Zoran: 'NFLX+SUPPORT, SOL+BEAR_FLAG and similar now blocked.'
+        """
+        if not pattern:
+            return False
+        brain = self._get_brain(ticker)
+        if pattern not in brain.patterns:
+            return False
+        p = brain.patterns[pattern]
+        total = p.get("total", 0)
+        wins = p.get("wins", 0)
+        if total < HARD_VETO_MIN_TRADES:
+            return False
+        wr = wins / total
+        if wr < HARD_VETO_MAX_WR:
+            logger.info(f"🚫 HARD VETO: {ticker}+{pattern} — {total} trades, {wr:.0%} WR < {HARD_VETO_MAX_WR:.0%} threshold")
+            return True
+        return False
 
     def should_prefer_pattern(self, ticker: str, pattern: str) -> bool:
         """Returns True if the brain has learned to prefer this pattern."""

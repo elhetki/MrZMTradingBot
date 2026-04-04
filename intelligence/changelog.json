@@ -6,5 +6,35 @@
       "\ud83d\udd27 markets.SOL.enabled: True \u2192 False (SOL: 13t, 15% WR, $-4.39. Disabling until conditions improve.)",
       "\ud83d\udd27 day_sizing.5: 0.5 \u2192 0.35 (Weekend WR 19% across 21 trades. Reducing weekend position size.)"
     ]
+  },
+  {
+    "date": "2026-03-29",
+    "timestamp": "2026-03-29T19:00:02.405714+00:00",
+    "changes": [
+      "\ud83d\udd27 markets.BTC.enabled: True \u2192 False (BTC: 42t, 19% WR, $-38.78. Disabling until conditions improve.)",
+      "\ud83d\udd27 markets.XRP.enabled: False \u2192 False (XRP: 17t, 18% WR, $-8.68. Disabling until conditions improve.)"
+    ]
+  },
+  {
+    "date": "2026-03-30",
+    "timestamp": "2026-03-30T19:00:02.042756+00:00",
+    "changes": [
+      "\ud83d\udd27 exit.sl_pct: -3.5 \u2192 -4.2 (SL hit 62% of trades. Getting stopped out too often. Widening SL.)"
+    ]
+  },
+  {
+    "date": "2026-03-31",
+    "timestamp": "2026-03-31T19:00:03.038062+00:00",
+    "changes": [
+      "\ud83d\udd27 markets.SUI.enabled: True \u2192 False (SUI: 14t, 7% WR, $-19.11. Disabling until conditions improve.)",
+      "\ud83d\udd27 exit.sl_pct: -4.2 \u2192 -5.0 (SL hit 56% of trades. Getting stopped out too often. Widening SL.)"
+    ]
+  },
+  {
+    "date": "2026-04-03",
+    "timestamp": "2026-04-03T19:00:01.642784+00:00",
+    "changes": [
+      "\ud83d\udcdd NOTE: Longs: 67% WR ($+27.23) vs Shorts: 12% WR ($-5.43). Trending day \u2014 consider tightening short filters."
+    ]
   }
 ]

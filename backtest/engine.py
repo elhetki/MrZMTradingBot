@@ -98,7 +98,7 @@ class BacktestEngine:
         self.config = config
         self.bt_config = config.get("backtest", {})
         self.fee_rate = self.bt_config.get("fee_rate", 0.00045)
-        self.slippage_estimate = self.bt_config.get("slippage_estimate", 0.001)
+        self.slippage_estimate = self.bt_config.get("slippage_estimate", 0.0002)  # 0.02% realistic for HL perps
         self.initial_capital = self.bt_config.get("initial_capital", 10_000.0)
         self.bet_size = config.get("bet_size", 100.0)
 

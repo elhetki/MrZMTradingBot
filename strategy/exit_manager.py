@@ -1,13 +1,13 @@
 """
-Exit Manager v2.5 — Clean SL/TP Only + Funding Guard
-No break-even. No partial closes. Either TP or SL. Clean.
+Exit Manager v3.0 — Break-Even + Clean SL/TP + Funding Guard
+=============================================================
+v3.0 changes (Zoran v3.0 alignment):
+  - Break-even RE-ENABLED: 6% trigger → move SL to entry+0.1%
+  - TP: 20% (was 10.5%) — 4:1 R:R
+  - SL: 5% (was 3.5%)
+  - Break-even offset accounts for real fees (not a nominal $5 gain)
 
-SL: -3.5% leveraged P&L (cut the loser)
-TP: +10.5% leveraged P&L (let the winner run)
-R/R: 1:3. Math > emotion.
-
-Funding Guard: Close all positions 5 minutes before the hour.
-Never hold through a funding tick. Zero riba.
+Zoran: "86% of all wins came from BE exits."
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ import time
 
 class ExitStage(Enum):
     OPEN = "OPEN"
+    BE_ACTIVE = "BE_ACTIVE"     # Break-even triggered, SL moved to entry+offset
     CLOSED = "CLOSED"
 
 
@@ -38,6 +39,7 @@ class Position:
     stage: ExitStage = ExitStage.OPEN
     remaining_fraction: float = 1.0
     partial_done: bool = False
+    be_triggered: bool = False      # v3.0: break-even activated flag
 
     # Entry signal info (for learning engine)
     entry_pattern: str = ""
@@ -53,14 +55,11 @@ class Position:
     exit_reason: Optional[str] = None
 
     def current_pnl_pct(self, current_price: float) -> float:
-        """
-        Returns the LEVERAGED P&L percentage.
-        """
+        """Returns the LEVERAGED P&L percentage."""
         if self.direction == "LONG":
             raw_pct = (current_price - self.entry_price) / self.entry_price * 100
         else:
             raw_pct = (self.entry_price - current_price) / self.entry_price * 100
-
         return raw_pct * self.leverage
 
     def current_pnl_usd(self, current_price: float) -> float:
@@ -75,7 +74,7 @@ class Position:
 @dataclass
 class ExitAction:
     """Represents an action the exit manager wants to take."""
-    action: str             # 'CLOSE_FULL', 'HOLD'
+    action: str             # 'CLOSE_FULL', 'MOVE_SL', 'HOLD'
     position_id: str
     reason: str
     stage: ExitStage
@@ -85,23 +84,30 @@ class ExitAction:
 
 class ExitManager:
     """
-    v2.5 — Clean exits only.
-    Two outcomes: Stop Loss or Take Profit. Nothing in between.
+    v3.0 — Break-Even + SL/TP + Funding Guard.
+    BE activates at 6% → SL moves to entry+0.1% leveraged.
     """
 
     def __init__(self, config: dict):
         exit_cfg = config.get("exit", {})
-        self.sl_pct = exit_cfg.get("sl_pct", -3.5)            # -3.5%
-        self.tp_pct = exit_cfg.get("tp_pct", 10.5)            # +10.5%
-        self.hard_stop_pct = exit_cfg.get("hard_stop_pct", -5.25)  # v2.5: absolute max loss safety net
-        self.use_simple = exit_cfg.get("use_simple_exits", True)
+        self.sl_pct = exit_cfg.get("sl_pct", -5.0)             # -5%
+        self.tp_pct = exit_cfg.get("tp_pct", 20.0)             # +20% (4:1 R:R)
+        self.hard_stop_pct = exit_cfg.get("hard_stop_pct", -5.25)
+        self.use_simple = exit_cfg.get("use_simple_exits", False)
         self.funding_guard = exit_cfg.get("funding_guard", True)
-        self.funding_guard_minutes = exit_cfg.get("funding_guard_minutes", 5)  # Close 5 min before :00
+        self.funding_guard_minutes = exit_cfg.get("funding_guard_minutes", 2)
+
+        # Break-even config (v3.0)
+        be_cfg = exit_cfg.get("break_even", {})
+        self.be_enabled = be_cfg.get("enabled", True)
+        self.be_trigger_pct = be_cfg.get("trigger_pct", 6.0)   # Trigger at +6% leveraged gain
+        self.be_offset_pct = be_cfg.get("offset_pct", 0.1)     # Move SL to entry+0.1%
+
+        # Per-position dynamic SL tracker (position_id → current_sl_pct)
+        self._dynamic_sl: dict[str, float] = {}
 
     def check(self, position: Position, current_price: float) -> ExitAction:
-        """
-        Check if SL or TP is hit. That's it. Clean.
-        """
+        """Check exit conditions. BE → TP → SL in priority order."""
         if position.closed:
             return ExitAction("HOLD", position.id, "Already closed", position.stage)
 
@@ -110,6 +116,9 @@ class ExitManager:
         # Update peak P&L tracking
         if pnl_pct > position.peak_pnl_pct:
             position.peak_pnl_pct = pnl_pct
+
+        # Get current effective SL (may have been moved to BE)
+        effective_sl = self._dynamic_sl.get(position.id, self.sl_pct)
 
         # ── Funding Guard — close before the hour ─────────────────────
         if self.funding_guard:
@@ -123,9 +132,7 @@ class ExitManager:
                     stage=ExitStage.CLOSED,
                 )
 
-        # ── HARD STOP — absolute safety net (checked FIRST) ─────────
-        # v2.5: Even if price gaps through SL, this catches it.
-        # A -15% loss can never happen again. Max loss: -5.25%.
+        # ── HARD STOP — absolute safety net ─────────────────────────
         if pnl_pct <= self.hard_stop_pct:
             return ExitAction(
                 action="CLOSE_FULL",
@@ -133,6 +140,22 @@ class ExitManager:
                 reason=f"🚨 HARD STOP! {pnl_pct:.1f}% (max: {self.hard_stop_pct}%) — emergency exit",
                 stage=ExitStage.CLOSED,
             )
+
+        # ── Break-Even Check (v3.0) ──────────────────────────────────
+        if self.be_enabled and not position.be_triggered:
+            if pnl_pct >= self.be_trigger_pct:
+                # Move SL to entry + offset (positive leveraged %)
+                new_sl = self.be_offset_pct
+                self._dynamic_sl[position.id] = new_sl
+                position.be_triggered = True
+                position.stage = ExitStage.BE_ACTIVE
+                return ExitAction(
+                    action="MOVE_SL",
+                    position_id=position.id,
+                    reason=f"🔒 BE activated at {pnl_pct:+.1f}% → SL moved to +{self.be_offset_pct}% (entry+offset). Protected.",
+                    stage=ExitStage.BE_ACTIVE,
+                    new_sl_pnl_pct=new_sl,
+                )
 
         # ── Take Profit ──────────────────────────────────────────────
         if pnl_pct >= self.tp_pct:
@@ -143,20 +166,22 @@ class ExitManager:
                 stage=ExitStage.CLOSED,
             )
 
-        # ── Stop Loss ────────────────────────────────────────────────
-        if pnl_pct <= self.sl_pct:
+        # ── Stop Loss (or Break-Even SL) ─────────────────────────────
+        if pnl_pct <= effective_sl:
+            be_label = " [BE exit]" if position.be_triggered else ""
             return ExitAction(
                 action="CLOSE_FULL",
                 position_id=position.id,
-                reason=f"❌ SL hit. {pnl_pct:.1f}% (limit: {self.sl_pct}%)",
+                reason=f"{'🔒' if position.be_triggered else '❌'} SL hit{be_label}. {pnl_pct:.1f}% (limit: {effective_sl}%)",
                 stage=ExitStage.CLOSED,
             )
 
         # ── Hold ─────────────────────────────────────────────────────
+        be_status = f" | BE: {'✅' if position.be_triggered else '⏳ @{:.0f}%'.format(self.be_trigger_pct)}"
         return ExitAction(
             action="HOLD",
             position_id=position.id,
-            reason=f"Holding. P&L: {pnl_pct:+.2f}% | Peak: {position.peak_pnl_pct:+.2f}%",
+            reason=f"Holding. P&L: {pnl_pct:+.2f}% | Peak: {position.peak_pnl_pct:+.2f}%{be_status}",
             stage=position.stage,
         )
 
@@ -174,7 +199,12 @@ class ExitManager:
             position.pnl_usd = position.current_pnl_usd(current_price)
             position.exit_reason = action.reason
             position.stage = ExitStage.CLOSED
+            # Clean up dynamic SL
+            self._dynamic_sl.pop(position.id, None)
+        elif action.action == "MOVE_SL":
+            # SL already updated in _dynamic_sl above
+            pass
 
     def get_sl_threshold(self, position_id: str) -> float:
-        """Get current SL P&L threshold."""
-        return self.sl_pct
+        """Get current effective SL threshold for a position."""
+        return self._dynamic_sl.get(position_id, self.sl_pct)

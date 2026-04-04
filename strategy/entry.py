@@ -145,6 +145,34 @@ class EntryLogic:
         signal.direction = direction
 
         # ════════════════════════════════════════════════════════════
+        # HARD GATE: 1H RSI Direction Gate (v3.0 — Zoran)
+        # Blocks direction if 1H RSI is against the trade
+        # LONG blocked if 1H RSI < 40 (unless BULL_ENG or DBL_BOT confirm)
+        # SHORT blocked if 1H RSI > 60 (unless BEAR_ENG or DBL_TOP confirm)
+        # Rationale: stops catching falling knives in trending markets
+        # ════════════════════════════════════════════════════════════
+        htf_rsi = self._get_htf_rsi(df)
+        if htf_rsi is not None:
+            rsi_gate_exempt_long = {"Bullish Engulfing", "Double Bottom", "Inverse Head & Shoulders"}
+            rsi_gate_exempt_short = {"Bearish Engulfing", "Double Top", "Head & Shoulders"}
+            patterns_now = self._patterns.detect_all(df, direction)
+            pattern_names_now = {p.name for p in patterns_now}
+
+            if direction == "LONG" and htf_rsi < 40:
+                has_exemption = bool(pattern_names_now & rsi_gate_exempt_long)
+                if not has_exemption:
+                    signal.skip_reason = f"RSI gate: 1H RSI {htf_rsi:.1f} < 40, LONG blocked (no BULL_ENG/DBL_BOT)"
+                    signal.checks_failed.append(signal.skip_reason)
+                    return signal
+
+            if direction == "SHORT" and htf_rsi > 60:
+                has_exemption = bool(pattern_names_now & rsi_gate_exempt_short)
+                if not has_exemption:
+                    signal.skip_reason = f"RSI gate: 1H RSI {htf_rsi:.1f} > 60, SHORT blocked (no BEAR_ENG/DBL_TOP)"
+                    signal.checks_failed.append(signal.skip_reason)
+                    return signal
+
+        # ════════════════════════════════════════════════════════════
         # HARD GATE 2: 13/48 EMA crossover alignment
         # ════════════════════════════════════════════════════════════
         crossover = self._ema.detect_crossover(df, fast=13, slow=48)
@@ -204,6 +232,41 @@ class EntryLogic:
         signal.entry_pattern = pattern_desc if pattern_score > 0 else ""
         if pattern_score > 0:
             signal.checks_passed["chart_pattern"] = pattern_desc
+
+        # ── PATTERN GATE (Zoran filter: no-pattern trades = 24% WR, -$2,049) ──
+        require_pattern = self.config.get("scoring", {}).get("require_pattern", False)
+        if require_pattern and pattern_score == 0:
+            signal.skip_reason = "Pattern gate: no chart pattern detected (require_pattern=true)"
+            signal.checks_failed.append(signal.skip_reason)
+            return signal
+
+        # ── SUPPORT CONFIRMER GATE (v3.0 — Zoran: SUPPORT alone = 28% WR) ──
+        # SUPPORT BOUNCE pattern alone is not enough — needs strong reversal confirm
+        support_confirmer_patterns = {"Bullish Engulfing", "Double Bottom", "Bullish Pin Bar", "Momentum Burst Up"}
+        patterns_detected = self._patterns.detect_all(df, direction)
+        pattern_names = {p.name for p in patterns_detected}
+        has_only_support = (
+            "Support Bounce" in pattern_names and
+            direction == "LONG" and
+            not pattern_names & support_confirmer_patterns
+        )
+        if has_only_support:
+            signal.skip_reason = "Support confirmer gate: SUPPORT alone (28% WR) needs BULL_ENG/DBL_BOT/PIN_BULL/MOM_UP"
+            signal.checks_failed.append(signal.skip_reason)
+            return signal
+
+        # ── BIAS GATE (v3.0 — counter-trend needs higher conviction) ──
+        # If 1H EMA bias is opposite to direction → require score ≥ 7
+        ema_bias = self._get_ema_bias(df)
+        if ema_bias and ema_bias != direction:
+            bias_min_score = self.config.get("scoring", {}).get("counter_trend_min_score", 7)
+            # We'll check this after scoring — store for later
+            signal.checks_passed["bias_gate"] = f"Counter-trend ({ema_bias} bias vs {direction} signal) — need score ≥{bias_min_score}"
+            signal._counter_trend = True
+            signal._counter_trend_min = bias_min_score
+        else:
+            signal._counter_trend = False
+            signal._counter_trend_min = 0
 
         # --- Volume confirmation (+2) ---
         vol_signal = self._volume.confirm(df)
@@ -296,6 +359,14 @@ class EntryLogic:
             signal.checks_failed.append(signal.skip_reason)
             return signal
 
+        # ── BIAS GATE final check (v3.0) ──────────────────────────
+        if getattr(signal, '_counter_trend', False):
+            min_required = getattr(signal, '_counter_trend_min', 7)
+            if total_score < min_required:
+                signal.skip_reason = f"Bias gate: counter-trend signal needs score ≥{min_required}, got {total_score}"
+                signal.checks_failed.append(signal.skip_reason)
+                return signal
+
         # ════════════════════════════════════════════════════════════
         # ALL GATES PASSED — valid signal
         # ════════════════════════════════════════════════════════════
@@ -338,3 +409,52 @@ class EntryLogic:
         if direction == "SHORT" and all(m < 0 for m in moves):
             return 1
         return 0
+
+    def _get_htf_rsi(self, df: pd.DataFrame, period: int = 14) -> Optional[float]:
+        """
+        Calculate RSI on 1H equivalent candles.
+        Approximates 1H RSI by resampling 3m/5m candles to 1H bars (20 × 3m = 1H).
+        Returns None if insufficient data.
+        """
+        try:
+            candle_multiplier = 20  # 20 × 3m candles = 1H
+            if len(df) < candle_multiplier * (period + 5):
+                return None
+            # Resample to 1H equivalent
+            closes = df["close"].astype(float)
+            resampled = closes.iloc[::candle_multiplier].reset_index(drop=True)
+            if len(resampled) < period + 1:
+                return None
+            delta = resampled.diff()
+            gain = delta.clip(lower=0)
+            loss = -delta.clip(upper=0)
+            avg_gain = gain.ewm(com=period - 1, min_periods=period).mean()
+            avg_loss = loss.ewm(com=period - 1, min_periods=period).mean()
+            rs = avg_gain / avg_loss.replace(0, float('nan'))
+            rsi = 100 - (100 / (1 + rs))
+            return float(rsi.iloc[-1]) if not rsi.empty else None
+        except Exception:
+            return None
+
+    def _get_ema_bias(self, df: pd.DataFrame) -> Optional[str]:
+        """
+        Get 1H EMA bias (LONG or SHORT) based on 48 EMA vs 200 EMA on higher TF.
+        Returns 'LONG', 'SHORT', or None if unclear.
+        """
+        try:
+            candle_multiplier = 20
+            if len(df) < candle_multiplier * 50:
+                return None
+            closes = df["close"].astype(float)
+            resampled = closes.iloc[::candle_multiplier].reset_index(drop=True)
+            if len(resampled) < 50:
+                return None
+            ema48 = resampled.ewm(span=48, adjust=False).mean().iloc[-1]
+            ema200 = resampled.ewm(span=200, adjust=False).mean().iloc[-1] if len(resampled) >= 200 else None
+            if ema200 is None:
+                # Fall back to 48 vs current price
+                current = float(resampled.iloc[-1])
+                return "LONG" if current > ema48 else "SHORT"
+            return "LONG" if ema48 > ema200 else "SHORT"
+        except Exception:
+            return None

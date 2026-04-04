@@ -36,13 +36,21 @@ fi
 # ── Restart bot if config changed ──
 if echo "$REPORT" | grep -q "Config updated"; then
     echo "[$(date -u)] Config changed — restarting bot..."
-    kill $(cat "$BOT_DIR/logs/bot.pid" 2>/dev/null) 2>/dev/null || true
+    # Kill ALL existing bot.py instances (prevents duplicates)
+    pkill -f "python3 bot.py" 2>/dev/null || true
     sleep 3
+    # Verify all dead
+    if pgrep -f "python3 bot.py" > /dev/null 2>&1; then
+        pkill -9 -f "python3 bot.py" 2>/dev/null || true
+        sleep 2
+    fi
     source /root/.openclaw/workspace/.env.secrets
     cd "$BOT_DIR"
     nohup python3 bot.py &> logs/bot.log &
     echo $! > logs/bot.pid
     echo "[$(date -u)] Bot restarted with new config (PID: $(cat logs/bot.pid))"
+else
+    echo "[$(date -u)] No config changes — bot continues running"
 fi
 
 echo "[$(date -u)] Daily coach complete"

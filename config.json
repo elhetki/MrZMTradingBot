@@ -5,23 +5,29 @@
     "wallet_address": "0xC19795B8Ec4fdcf9452CB7536f3365183927c1D7",
     "api_wallet_address": "0xDa239a7261e9C9f9B69c647eAFaa915aa555b5dd",
     "private_key": "ENV:HL_API_PRIVATE_KEY",
-    "bet_size": 100.0,
+    "bet_size": 50.0,
     "max_positions": 3,
     "daily_loss_cap": 500.0,
     "consecutive_loss_limit": 3,
     "cooldown_seconds": 600,
     "scoring": {
-        "min_score": 5,
-        "min_probability": 0.5
+        "min_score": 6,
+        "min_probability": 0.7,
+        "require_pattern": true
     },
     "exit": {
-        "sl_pct": -3.5,
-        "tp_pct": 10.5,
+        "sl_pct": -5.0,
+        "tp_pct": 20.0,
         "hard_stop_pct": -5.25,
-        "use_simple_exits": true,
+        "use_simple_exits": false,
         "funding_guard": true,
         "funding_guard_minutes": 2,
-        "_v25_note": "v2.5: Clean SL/TP + hard stop safety net + funding guard. No interest ever."
+        "break_even": {
+            "enabled": true,
+            "trigger_pct": 6.0,
+            "offset_pct": 0.1
+        },
+        "_v30_note": "v3.0: TP 20% (4:1 R:R) + break-even at 6% trigger. Zoran: 86% of wins from BE."
     },
     "day_sizing": {
         "0": 0.7,
@@ -45,15 +51,15 @@
     "bb_std": 2.0,
     "markets": {
         "BTC": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "crypto",
-            "leverage": 40,
+            "leverage": 20,
             "slippage_limit": 0.0005
         },
         "ETH": {
             "enabled": true,
             "asset_class": "crypto",
-            "leverage": 40,
+            "leverage": 20,
             "slippage_limit": 0.0005
         },
         "SOL": {
@@ -70,7 +76,7 @@
             "_note": "Not available on Hyperliquid"
         },
         "BRENT": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "commodity",
             "leverage": 20,
             "slippage_limit": 0.003,
@@ -96,7 +102,7 @@
             "slippage_limit": 0.003
         },
         "SUI": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "crypto",
             "leverage": 20,
             "slippage_limit": 0.002
@@ -114,7 +120,7 @@
             "slippage_limit": 0.002
         },
         "TSLA": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "stock",
             "leverage": 20,
             "slippage_limit": 0.002
@@ -126,25 +132,25 @@
             "slippage_limit": 0.002
         },
         "MSFT": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "stock",
             "leverage": 20,
             "slippage_limit": 0.002
         },
         "META": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "stock",
             "leverage": 20,
             "slippage_limit": 0.002
         },
         "AMZN": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "stock",
             "leverage": 20,
             "slippage_limit": 0.002
         },
         "GOOGL": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "stock",
             "leverage": 20,
             "slippage_limit": 0.002
@@ -156,19 +162,19 @@
             "slippage_limit": 0.002
         },
         "PLTR": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "stock",
             "leverage": 20,
             "slippage_limit": 0.002
         },
         "MSTR": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "stock",
             "leverage": 20,
             "slippage_limit": 0.002
         },
         "XRP": {
-            "enabled": true,
+            "enabled": false,
             "asset_class": "crypto",
             "leverage": 40,
             "slippage_limit": 0.001
@@ -214,7 +220,7 @@
         "lookback_months": 6,
         "candle_interval": "5m",
         "fee_rate": 0.00045,
-        "slippage_estimate": 0.001,
+        "slippage_estimate": 0.0002,
         "initial_capital": 10000.0
     },
     "chop_filter": {
@@ -255,6 +261,44 @@
         "fear_greed_enabled": true,
         "fear_greed_url": "https://api.alternative.me/fng/",
         "refresh_seconds": 3600
+    },
+    "volume_gate": {
+        "enabled": true,
+        "ma_period": 20,
+        "min_ratio": 0.8,
+        "strong_ratio": 1.5,
+        "_note": "Zoran rule: no volume = no trade. Blocks entries below 80% of 20-candle avg"
+    },
+    "key_levels": {
+        "enabled": true,
+        "hourly_lookback": 60,
+        "pivot_window": 3,
+        "cluster_tolerance_atr": 0.5,
+        "proximity_tiers": [
+            0.5,
+            1.0,
+            1.5
+        ],
+        "score_tiers": [
+            3,
+            2,
+            1
+        ],
+        "_note": "Scans 60 hourly candles for S/R pivots. Entries near aligned levels get +1 to +3"
+    },
+    "market_regime": {
+        "enabled": true,
+        "panic_threshold": 3,
+        "rally_threshold": 5,
+        "recovery_ema_confirm": true,
+        "panic_long_exempt": ["WTI", "BRENT", "XAU", "XAG"],
+        "_note": "v3.0: Panic/Recovery/Rally/Cascade — Zoran's Phase 7 gates 23-26"
+    },
+    "scoring": {
+        "min_score": 6,
+        "min_probability": 0.7,
+        "require_pattern": true,
+        "counter_trend_min_score": 7
     },
     "learnings_file": "learnings.json",
     "log_dir": "logs",

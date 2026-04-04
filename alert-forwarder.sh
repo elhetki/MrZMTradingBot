@@ -2,6 +2,8 @@
 # Forwards trading bot alerts via Pegasus Telegram Bot
 # Cron: * * * * * /root/.openclaw/workspace/MrZMTradingBot/alert-forwarder.sh
 
+source /root/.openclaw/workspace/.env.secrets
+
 ALERTS_FILE="/root/.openclaw/workspace/MrZMTradingBot/alerts.log"
 POS_FILE="/root/.openclaw/workspace/MrZMTradingBot/.alert-pos"
 
@@ -25,7 +27,7 @@ echo "$CURRENT_SIZE" > "$POS_FILE"
 
 # Parse and forward via Telegram Bot API
 echo "$NEW_CONTENT" | python3 -c "
-import sys, urllib.request, urllib.parse, time, re
+import sys, os, urllib.request, urllib.parse, time, re
 
 BOT_TOKEN = os.environ.get('PEGASUS_TG_TOKEN', '')
 CHAT_ID = '6670320636'

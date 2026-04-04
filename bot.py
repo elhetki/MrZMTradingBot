@@ -39,6 +39,9 @@ from utils.market_hours import MarketHoursChecker
 from utils.news_sentiment import NewsSentiment
 from utils.google_news import GoogleNewsSentiment
 from strategy.volatility_regime import VolatilityRegimeDetector
+from strategy.volume_gate import VolumeGate
+from strategy.key_levels import KeyLevelDetector
+from strategy.market_regime import MarketRegimeGate
 from utils.telegram_alerts import alert_trade_open, alert_trade_close, alert_daily_summary
 
 logging.basicConfig(
@@ -92,13 +95,18 @@ class MahmudBot:
         self.sentiment = NewsSentiment(config, hl_client=self._hl_client)
         self.google_news = GoogleNewsSentiment(config.get("google_news", {"enabled": True}))
         self.regime_detector = VolatilityRegimeDetector(config.get("volatility_regime", {"enabled": True}))
+        self.volume_gate = VolumeGate(config)
+        self.key_levels = KeyLevelDetector(config, hl_client=self._hl_client)
+        self.market_regime = MarketRegimeGate(config)   # v3.0: Panic/Rally/Cascade
 
         chop_status = "ON" if config.get("chop_filter", {}).get("enabled", True) else "OFF"
         mtf_status = "ON" if config.get("mtf", {}).get("enabled", True) else "OFF"
         ob_status = "ON" if config.get("orderbook", {}).get("enabled", True) else "OFF"
         sent_status = "ON" if config.get("sentiment", {}).get("enabled", True) else "OFF"
         news_status = "ON" if config.get("google_news", {}).get("enabled", True) else "OFF"
-        logger.info(f"🧠 Intelligence layers: Chop={chop_status} | MTF={mtf_status} | WOBI={ob_status} | Sentiment={sent_status} | News={news_status}")
+        vg_status = "ON" if config.get("volume_gate", {}).get("enabled", True) else "OFF"
+        kl_status = "ON" if config.get("key_levels", {}).get("enabled", True) else "OFF"
+        logger.info(f"🧠 Intelligence layers: Chop={chop_status} | MTF={mtf_status} | WOBI={ob_status} | Sentiment={sent_status} | News={news_status} | VolGate={vg_status} | KeyLvl={kl_status}")
 
         # Execution engine
         if self.dry_run:
@@ -181,6 +189,21 @@ class MahmudBot:
             logger.debug("[BLACKOUT] US Open (14:00-14:30 UTC) — skipping")
             return
 
+        # Dead zone blackouts (our data: consistent losers)
+        # 07:00 UTC = -$40.59, 25% WR (European open noise)
+        # 01:00 UTC = -$15.86, 17% WR (Asian dead zone)
+        # 20:00 UTC = -$8.58, 19% WR (US close chop)
+        if hour in (7, 1, 20):
+            logger.debug(f"[BLACKOUT] Dead zone hour {hour:02d}:00 UTC — skipping signals")
+            return
+
+        # No new entries within 5 min of funding tick (Deep Research rec #2)
+        # Funding is hourly at :00. Entries after :55 can never reach TP before forced close.
+        minutes_to_hour = 60 - now_utc.minute if now_utc.minute > 0 else 0
+        if 0 < minutes_to_hour <= 5:
+            logger.debug(f"[FUNDING GUARD] No new entries {minutes_to_hour}min before funding tick")
+            return
+
         for ticker, market_cfg in self.markets.items():
             asset_class = market_cfg.get("asset_class", "crypto")
 
@@ -215,6 +238,23 @@ class MahmudBot:
             if regime.min_score_override and regime.regime.value == "STORM":
                 logger.info(f"🌪️ STORM regime on {ticker} — min score raised to {regime.min_score_override}, size at {regime.size_multiplier:.0%}")
 
+            # ── v3.0 Layer: Feed market condition into global regime gate ──
+            from strategy.ema import EMACalculator as _EMACalc
+            _ema_tmp = _EMACalc()
+            _df_tmp = _ema_tmp.calculate(df.copy())
+            _ema_tmp_vals = _ema_tmp.latest(_df_tmp)
+            _price_tmp = float(df["close"].iloc[-1])
+            _likely_dir_tmp = "LONG" if _ema_tmp_vals.is_bullish(_price_tmp) else "SHORT"
+            _ob_tmp = self.orderbook.analyze(ticker)
+            _wobi_tmp = _ob_tmp.wobi if _ob_tmp else 0.0
+            _htf_bear_tmp = (_likely_dir_tmp == "SHORT")
+            self.market_regime.update_market_condition(
+                ticker=ticker,
+                regime_value=regime.regime.value,
+                wobi_score=_wobi_tmp,
+                htf_bear=_htf_bear_tmp,
+            )
+
             # Update zones
             self._update_zones(ticker, df)
             zones = self._zone_cache.get(ticker, [])
@@ -224,6 +264,13 @@ class MahmudBot:
             if chop_result.is_choppy:
                 logger.debug(f"Chop filter blocked {ticker}: {chop_result.summary()}")
                 self._chop_blocked += 1
+                continue
+
+            # ── v2.7 Layer 0b: Volume Gate (Zoran rule: no volume = no trade) ──
+            vol_gate_result = self.volume_gate.check(df)
+            if not vol_gate_result.allowed:
+                logger.debug(f"Volume gate blocked {ticker}: {vol_gate_result.summary()}")
+                self._vol_blocked += 1
                 continue
 
             # ── v2.5+ Layer 1: Multi-Timeframe Filter ────────────────
@@ -271,6 +318,31 @@ class MahmudBot:
                 continue
 
             if signal.valid:
+                # ── v3.0 Layer: Global Regime Gate (Panic/Rally/Cascade) ──
+                regime_allowed, regime_reason = self.market_regime.can_trade(ticker, signal.direction)
+                if not regime_allowed:
+                    logger.info(f"🌍 REGIME GATE blocked {ticker} {signal.direction}: {regime_reason}")
+                    continue
+
+                # Apply regime score bonus (rally/panic boosters)
+                regime_bonus = self.market_regime.get_score_bonus(signal.direction)
+                if regime_bonus:
+                    signal.score += regime_bonus
+                    signal.score_breakdown["regime_bonus"] = regime_bonus
+
+                # ── v3.0 Layer: Learning Hard Veto ──
+                if self.learning_brain.is_hard_vetoed(ticker, signal.entry_pattern):
+                    logger.info(f"🚫 LEARN VETO blocked {ticker} {signal.direction} pattern={signal.entry_pattern}")
+                    continue
+
+                # ── v2.7 Layer: Key Level Score Bonus ──
+                kl_result = self.key_levels.score_entry(ticker, signal.entry_price, signal.direction)
+                if kl_result.score_bonus > 0:
+                    signal.score += kl_result.score_bonus
+                    signal.score_breakdown["key_level"] = kl_result.score_bonus
+                    signal.checks_passed["key_level"] = kl_result.reason
+                    logger.info(f"🔑 Key level bonus +{kl_result.score_bonus} for {ticker}: {kl_result.reason}")
+
                 # Check storm override on min score
                 effective_min_score = self.config.get("scoring", {}).get("min_score", 6)
                 if regime.min_score_override and regime.regime.value == "STORM":
@@ -355,16 +427,20 @@ class MahmudBot:
                     pos.id, price, action.reason, fraction=1.0
                 )
                 if record:
+                    sl_hit = record.pnl_usd < 0
                     self.learning_brain.record_trade(
                         ticker=record.ticker,
                         direction=record.direction,
                         pnl_usd=record.pnl_usd,
                         pnl_pct=record.pnl_pct,
-                        sl_hit=(record.pnl_usd < 0),
+                        sl_hit=sl_hit,
                         pattern=getattr(pos, 'entry_pattern', ''),
                         score=getattr(pos, 'entry_score', 0),
                         rsi_at_entry=getattr(pos, 'entry_rsi', 50.0),
                     )
+                    # v3.0: Feed SL hits into cascade tracker
+                    if sl_hit and not getattr(pos, 'be_triggered', False):
+                        self.market_regime.record_sl_hit(record.direction)
                     logger.info(f"📕 Closed: {record.ticker} {record.direction} | P&L: {record.pnl_pct:+.1f}% (${record.pnl_usd:+.2f})")
                     alert_trade_close(
                         ticker=record.ticker,
@@ -431,12 +507,14 @@ class MahmudBot:
             markets_scanned=len(self.markets),
             chop_blocked=self._chop_blocked,
             mtf_blocked=self._mtf_blocked,
+            vol_blocked=self._vol_blocked,
             per_market=per_market if per_market else None,
         )
         # Reset counters
         self._chop_blocked = 0
         self._mtf_blocked = 0
         self._wobi_vetoed = 0
+        self._vol_blocked = 0
 
     def run(self):
         """Main bot loop."""
@@ -453,6 +531,9 @@ class MahmudBot:
         logger.info(f"   WOBI: depth={self.orderbook.depth}, threshold=±{self.orderbook.wobi_threshold}")
         logger.info(f"   Hard Stop: {self.exit_manager.hard_stop_pct}% max loss")
         logger.info(f"   Patterns: 23 active")
+        logger.info(f"   Vol Gate: min {self.volume_gate.min_ratio:.0%} of 20-candle avg")
+        logger.info(f"   Key Levels: {self.key_levels.hourly_lookback} hourly candles, pivot_w={self.key_levels.pivot_window}")
+        logger.info(f"   WOBI: v2.1 (anti-spoofing ON)")
         logger.info(f"   Prob Cap: 75% max (honest probability)")
         logger.info("="*60 + "\n")
 
@@ -470,6 +551,7 @@ class MahmudBot:
         self._chop_blocked = 0
         self._mtf_blocked = 0
         self._wobi_vetoed = 0
+        self._vol_blocked = 0
 
         while _running:
             now = time.time()

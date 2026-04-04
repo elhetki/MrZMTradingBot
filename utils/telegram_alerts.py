@@ -113,6 +113,7 @@ def alert_30min_stats(
     markets_scanned: int,
     chop_blocked: int = 0,
     mtf_blocked: int = 0,
+    vol_blocked: int = 0,
     per_market: dict = None,
 ):
     """Auto stats report every 30 minutes — like Zoran's bot."""
@@ -127,8 +128,8 @@ def alert_30min_stats(
         f"📂 Open positions: {open_positions}",
         f"🔍 Markets scanned: {markets_scanned}",
     ]
-    if chop_blocked > 0 or mtf_blocked > 0:
-        lines.append(f"🚫 Filtered: Chop={chop_blocked} | MTF={mtf_blocked}")
+    if chop_blocked > 0 or mtf_blocked > 0 or vol_blocked > 0:
+        lines.append(f"🚫 Filtered: Chop={chop_blocked} | MTF={mtf_blocked} | Vol={vol_blocked}")
 
     if per_market:
         lines.append("")
